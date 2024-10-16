@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net8</TargetFrameworks>
+
+    <PackageId>Microsoft.SemanticKernel.Connectors.Elasticsearch</PackageId>
+    <Title>Elasticsearch connector for Microsoft Semantic Kernel</Title>
+    <Description>Elasticsearch connector for Microsoft Semantic Kernel.</Description>
+    <AssemblyTitle>$(Title)</AssemblyTitle>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/elastic/semantic-kernel-net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/elastic/semantic-kernel-net</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+
+    <IsPublishable>false</IsPublishable>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <NoWarn>IDE0130</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\Assets\logo.png" Pack="true" PackagePath="" Visible="false" />
+    <Content Include="..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <Content Include="..\README.md" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Elastic.Clients.Elasticsearch" />
+    <PackageReference Include="Microsoft.SemanticKernel.Abstractions" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <PackageReference Include="MinVer" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+</Project>

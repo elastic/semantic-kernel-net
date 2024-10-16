@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  workflow_call:
+    inputs:
+      path:
+        description: The path to look for a Visual Studio Solution file (without a trailing slash).
+        type: string
+        required: false
+        default: ''
+
+env:
+  BUILD_CONFIG: Debug
+  DOTNET_GLOBAL_JSON: ${{ inputs.path != '' && format('{0}/global.json', inputs.path) || 'global.json' }}
+  RESTORE_PATTERN: ${{ inputs.path != '' && format('{0}/**/packages.lock.json', inputs.path) || '**/packages.lock.json' }}
+  TESTS_PATTERN: ${{ inputs.path != '' && format('{0}/**/*.Test*.csproj', inputs.path) || '**/*.Test*.csproj' }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Retrieve the preceding commit to enable 'changed-files' to create a diff.
+          fetch-depth: 2
+
+      - name: .NET Setup
+        uses: zyactions/dotnet-setup@v1
+        with:
+          global-json-file: ${{ env.DOTNET_GLOBAL_JSON }}
+          problem-matcher: false
+
+      - name: Install latest .NET Format tool
+        shell: bash
+        run: |
+          dotnet tool install -g dotnet-format --version "8.*" --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet8/nuget/v3/index.json
+
+      - name: Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@729c70475c2976c3d4ca8897d34d9df975a4d05c
+        with:
+          files: ${{ inputs.path != '' && format('{0}/**', inputs.path) || '' }}
+
+      - name: .NET Cache Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles(env.RESTORE_PATTERN) }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: .NET Restore
+        uses: zyactions/dotnet-restore@v1
+        with:
+          working-directory: ${{ inputs.path }}
+
+      # TODO: Add additional generic '.editorconfig' linting, e.g. for `*.csproj` files
+      # TODO: Always lint all files, if '.editorconfig' has changed
+
+      - name: .NET Lint
+        uses: zyactions/dotnet-lint@v1
+        with:
+          working-directory: ${{ inputs.path }}
+          # This list is empty for the initial commit. NET Lint will lint all files in this case.
+          include: ${{ steps.changed-files.outputs.all_changed_files }}
+          use-standalone-tool: true
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    env:
+      FILTERED_SOLUTION: ${{ inputs.path != '' && format('{0}/Tests.slnf', inputs.path) || 'Tests.slnf' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find Solution
+        id: find
+        uses: flobernd/actions/dotnet/find-solution@master
+        with:
+          directory: ${{ inputs.path }}
+
+      - name: Filter Solution
+        uses: flobernd/actions/dotnet/filter-solution@master
+        with:
+          solution: ${{ steps.find.outputs.solution }}
+          # This pattern is relative to the solution file and does not need to be prefixed with
+          # the 'directory' input value
+          pattern: '**/*.Test*.csproj'
+          output: ${{ env.FILTERED_SOLUTION }}
+
+      - name: .NET Setup
+        uses: zyactions/dotnet-setup@v1
+        with:
+          global-json-file: ${{ env.DOTNET_GLOBAL_JSON }}
+          problem-matcher: false
+
+      - name: .NET Cache Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles(env.RESTORE_PATTERN) }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: .NET Restore
+        uses: zyactions/dotnet-restore@v1
+        with:
+          workspace: ${{ env.FILTERED_SOLUTION }}
+
+      - name: .NET Build
+        uses: flobernd/actions/dotnet/build@master
+        with:
+          workspace: ${{ env.FILTERED_SOLUTION }}
+          configuration: ${{ env.BUILD_CONFIG }}
+
+      # - name: .NET Test
+      #   uses: flobernd/actions/dotnet/test@master
+      #   with:
+      #     projects: ${{ env.TESTS_PATTERN }}
+      #     fail-on-error: false
+      #     log-results: true
+      #     collect-coverage: false
+      #     maxdop: 4
+
+      # - name: Generate Test Report
+      #   uses: zyactions/test-reporter@main
+      #   with:
+      #     name: Test Results
+      #     path: ${{ inputs.path != '' && format('{0}/**/TestResults/*.trx', inputs.path) || '**/TestResults/*.trx' }}
+      #     reporter: dotnet-trx
+      #     fail-on-error: true
+      #     only-summary: false
+      #     max-annotations: 30

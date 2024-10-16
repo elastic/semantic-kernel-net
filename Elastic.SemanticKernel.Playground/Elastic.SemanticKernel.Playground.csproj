@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8</TargetFramework>
+
+    <OutputType>Exe</OutputType>
+    <IsPublishable>true</IsPublishable>
+    <IsPackable>false</IsPackable>
+
+    <NoWarn>SKEXP0001, SKEXP0020</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ApplicationIcon>..\Assets\logo.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Elastic.Clients.Elasticsearch" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elastic.SemanticKernel.Connectors.Elasticsearch\Elastic.SemanticKernel.Connectors.Elasticsearch.csproj" />
+  </ItemGroup>
+
+</Project>
