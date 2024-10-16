@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using Elastic.Clients.Elasticsearch;
+using Elastic.Transport.Extensions;
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
@@ -47,7 +48,7 @@ internal sealed class ElasticsearchDataModelMapper<TRecord> :
     {
         // Serialize the whole record to JsonObject.
 
-        var document = (SerializeSource(dataModel, _elasticsearchClientSettings) as JsonObject)!;
+        var document = SerializeSource(dataModel, _elasticsearchClientSettings)!;
 
         // Extract key property.
 
@@ -74,13 +75,11 @@ internal sealed class ElasticsearchDataModelMapper<TRecord> :
 
         // Serialize the whole model into the user-defined record type.
 
-        return (TRecord)DeserializeSource(storageModel.document, _elasticsearchClientSettings, typeof(TRecord))!;
+        return _elasticsearchClientSettings.SourceSerializer.Deserialize<TRecord>(storageModel.document)!;
     }
 
-    private static JsonNode? SerializeSource<T>(T? obj, IElasticsearchClientSettings settings)
+    private static JsonObject? SerializeSource<T>(T? obj, IElasticsearchClientSettings settings)
     {
-        // TODO: Use `SourceSerialization` helper
-
         if (obj is null)
         {
             return null;
@@ -91,25 +90,6 @@ internal sealed class ElasticsearchDataModelMapper<TRecord> :
         settings.SourceSerializer.Serialize(obj, stream);
         stream.Position = 0;
 
-        return JsonNode.Parse(stream);
-    }
-
-    private static object? DeserializeSource(JsonNode? node, IElasticsearchClientSettings settings, Type type)
-    {
-        // TODO: Use `SourceSerialization` helper
-
-        if (node is null)
-        {
-            return null;
-        }
-
-        using var stream = settings.MemoryStreamFactory.Create();
-
-        using var writer = new Utf8JsonWriter(stream);
-        node.WriteTo(writer);
-        writer.Flush();
-        stream.Position = 0;
-
-        return settings.SourceSerializer.Deserialize(type, stream);
+        return settings.SourceSerializer.Deserialize<JsonObject>(stream);
     }
 }

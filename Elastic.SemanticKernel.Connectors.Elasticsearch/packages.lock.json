@@ -4,11 +4,11 @@
     ".NETStandard,Version=v2.0": {
       "Elastic.Clients.Elasticsearch": {
         "type": "Direct",
-        "requested": "[8.15.8, )",
-        "resolved": "8.15.8",
-        "contentHash": "vuE31BWuFifaebVjWsTLtF4VwzJETZkupw5xTMfCm6xBGHCCoOQAJo16Y7k0xk0F0NGgqkO/0HYufEUwhYM0yQ==",
+        "requested": "[8.15.10, )",
+        "resolved": "8.15.10",
+        "contentHash": "WxbKk/PvNOhhGLkaqdrQwNWxiDtOYQJYZK6VwOkV65r7kQO+cpmjkYr/FoJ4ArfHFzZJf77VHNyvFSWDe3Vqzw==",
         "dependencies": {
-          "Elastic.Transport": "0.4.22"
+          "Elastic.Transport": "0.4.26"
         }
       },
       "Microsoft.SemanticKernel.Abstractions": {
@@ -66,13 +66,13 @@
       },
       "Elastic.Transport": {
         "type": "Transitive",
-        "resolved": "0.4.22",
-        "contentHash": "9J5GPHJcT8sewn2zVfWTrsCQvfQYgUiY/jx+IRjWUk7XNPd837qfEL42I5baH69cyW/e4RoDy8v76yxqz95tDw==",
+        "resolved": "0.4.26",
+        "contentHash": "ZbVlxXn9fnZqMOyOESea5n17096Xa8EPI/I9yD65y6yPXZKrs4GcqKTjfYk0jkxsl3n+CpaNureMA+VutpLZzQ==",
         "dependencies": {
           "Microsoft.CSharp": "4.7.0",
           "System.Buffers": "4.5.1",
           "System.Diagnostics.DiagnosticSource": "8.0.0",
-          "System.Text.Json": "8.0.4",
+          "System.Text.Json": "8.0.5",
           "System.Threading.Tasks.Extensions": "4.5.4"
         }
       },
@@ -184,11 +184,11 @@
     "net8.0": {
       "Elastic.Clients.Elasticsearch": {
         "type": "Direct",
-        "requested": "[8.15.8, )",
-        "resolved": "8.15.8",
-        "contentHash": "vuE31BWuFifaebVjWsTLtF4VwzJETZkupw5xTMfCm6xBGHCCoOQAJo16Y7k0xk0F0NGgqkO/0HYufEUwhYM0yQ==",
+        "requested": "[8.15.10, )",
+        "resolved": "8.15.10",
+        "contentHash": "WxbKk/PvNOhhGLkaqdrQwNWxiDtOYQJYZK6VwOkV65r7kQO+cpmjkYr/FoJ4ArfHFzZJf77VHNyvFSWDe3Vqzw==",
         "dependencies": {
-          "Elastic.Transport": "0.4.22"
+          "Elastic.Transport": "0.4.26"
         }
       },
       "Microsoft.SemanticKernel.Abstractions": {
@@ -229,8 +229,8 @@
       },
       "Elastic.Transport": {
         "type": "Transitive",
-        "resolved": "0.4.22",
-        "contentHash": "9J5GPHJcT8sewn2zVfWTrsCQvfQYgUiY/jx+IRjWUk7XNPd837qfEL42I5baH69cyW/e4RoDy8v76yxqz95tDw=="
+        "resolved": "0.4.26",
+        "contentHash": "ZbVlxXn9fnZqMOyOESea5n17096Xa8EPI/I9yD65y6yPXZKrs4GcqKTjfYk0jkxsl3n+CpaNureMA+VutpLZzQ=="
       },
       "Microsoft.Bcl.AsyncInterfaces": {
         "type": "Transitive",
