@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -49,6 +50,9 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
     /// <summary>A helper to access property information for the current data model and record definition.</summary>
     private readonly VectorStoreRecordPropertyReader _propertyReader;
+
+    /// <summary>A mapping from <see cref="VectorStoreRecordDefinition" /> to storage model property name.</summary>
+    private readonly Dictionary<VectorStoreRecordProperty, string> _propertyToStorageName;
 
     /// <summary>TODO: TBC</summary>
     private readonly IVectorStoreRecordMapper<TRecord, (string? id, JsonObject document)> _mapper;
@@ -112,42 +116,39 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
         if (typeof(TRecord) == typeof(VectorStoreGenericDataModel<string>))
         {
-            _mapper = (new ElasticsearchGenericDataModelMapper(_propertyReader, elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings) as
+            // Prioritize the user provided `StoragePropertyName` or fall-back to using the `DefaultFieldNameInferrer`
+            // function of the Elasticsearch client which by default redirects to the
+            // `JsonSerializerOptions.PropertyNamingPolicy.Convert() method.
+            _propertyToStorageName = _propertyReader.Properties.ToDictionary(k => k, v => v.StoragePropertyName ??
+                _elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings.DefaultFieldNameInferrer(v.DataModelPropertyName));
+
+            _mapper = (new ElasticsearchGenericDataModelMapper(_propertyToStorageName, elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings) as
                 IVectorStoreRecordMapper<TRecord, (string id, JsonObject document)>)!;
         }
         else
         {
-            _mapper = new ElasticsearchDataModelMapper<TRecord>(_propertyReader, elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings);
+            // Use the built-in property name inference of the Elasticsearch client. The default implementation
+            // prioritizes `JsonPropertyName` attributes and falls-back to the `DefaultFieldNameInferrer` function,
+            // which by default redirects to the `JsonSerializerOptions.PropertyNamingPolicy.Convert() method.
+            _propertyToStorageName = _propertyReader.Properties.ToDictionary(k => k, v =>
+            {
+                var info = _propertyReader.KeyPropertiesInfo.FirstOrDefault(x => string.Equals(x.Name, v.DataModelPropertyName, StringComparison.Ordinal)) ??
+                           _propertyReader.VectorPropertiesInfo.FirstOrDefault(x => string.Equals(x.Name, v.DataModelPropertyName, StringComparison.Ordinal)) ??
+                           _propertyReader.DataPropertiesInfo.FirstOrDefault(x => string.Equals(x.Name, v.DataModelPropertyName, StringComparison.Ordinal));
+
+                if (info is null)
+                {
+                    throw new InvalidOperationException("unreachable");
+                }
+
+                return _elasticsearchClient.ElasticsearchClient.Infer.PropertyName(info);
+            });
+
+            _mapper = new ElasticsearchDataModelMapper<TRecord>(_propertyToStorageName, elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings);
         }
 
         // Validate property types.
         _propertyReader.VerifyKeyProperties(SupportedKeyTypes);
-
-        // Validate key/id configuration.
-
-        // TODO: Do not use the built-in inference
-
-        var clientSettings = elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings;
-        if (clientSettings.DefaultDisableIdInference)
-        {
-            throw new ArgumentException("Id inference must be enabled on the Elasticsearch client instance.");
-        }
-
-        var idProperty =
-            elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings.IdProperties.TryGetValue(
-                typeof(TRecord), out var value)
-                ? value
-                : null;
-        if (string.IsNullOrEmpty(idProperty))
-        {
-            idProperty = "Id";
-        }
-
-        if (!string.Equals(_propertyReader.KeyProperty.DataModelPropertyName, idProperty, StringComparison.Ordinal))
-        {
-            throw new ArgumentException(
-                $"The name of the key property must match the name of the configured id property in the Elasticsearch client ('{idProperty}').");
-        }
     }
 
     /// <inheritdoc />
@@ -169,7 +170,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         var vectorProperties = _propertyReader.VectorProperties;
         foreach (var property in vectorProperties)
         {
-            propertyMappings.Add(Infer.Property(property.DataModelPropertyName),
+            propertyMappings.Add(_propertyToStorageName[property],
                 new DenseVectorProperty
                 {
                     Dims = property.Dimensions,
@@ -187,11 +188,11 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         {
             if (property.IsFullTextSearchable)
             {
-                propertyMappings.Add(Infer.Property(property.DataModelPropertyName), new TextProperty());
+                propertyMappings.Add(_propertyToStorageName[property], new TextProperty());
             }
             else
             {
-                propertyMappings.Add(Infer.Property(property.DataModelPropertyName), new KeywordProperty());
+                propertyMappings.Add(_propertyToStorageName[property], new KeywordProperty());
             }
         }
 

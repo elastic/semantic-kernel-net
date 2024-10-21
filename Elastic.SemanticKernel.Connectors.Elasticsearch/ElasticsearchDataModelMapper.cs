@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using Elastic.Clients.Elasticsearch;
@@ -24,23 +22,23 @@ internal sealed class ElasticsearchDataModelMapper<TRecord> :
     private readonly IElasticsearchClientSettings _elasticsearchClientSettings;
 
     /// <summary>A mapping from <see cref="VectorStoreRecordDefinition" /> to storage model property name.</summary>
-    private readonly Dictionary<VectorStoreRecordProperty, string> _properties;
+    private readonly Dictionary<VectorStoreRecordProperty, string> _propertyToStorageName;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ElasticsearchGenericDataModelMapper" /> class.
     /// </summary>
-    /// <param name="propertyReader">A helper to access property information for the current data model and record definition.</param>
+    /// <param name="propertyToStorageName">A mapping from <see cref="VectorStoreRecordDefinition" /> to storage model property name.</param>
     /// <param name="elasticsearchClientSettings">The Elasticsearch client settings to use.</param>
     public ElasticsearchDataModelMapper(
-        VectorStoreRecordPropertyReader propertyReader,
+        Dictionary<VectorStoreRecordProperty, string> propertyToStorageName,
         IElasticsearchClientSettings elasticsearchClientSettings)
     {
-        Verify.NotNull(propertyReader);
+        Verify.NotNull(propertyToStorageName);
         Verify.NotNull(elasticsearchClientSettings);
 
         // Assign.
         _elasticsearchClientSettings = elasticsearchClientSettings;
-        _properties = propertyReader.Properties.ToDictionary(k => k, v => elasticsearchClientSettings.DefaultFieldNameInferrer(v.DataModelPropertyName));
+        _propertyToStorageName = propertyToStorageName;
     }
 
     /// <inheritdoc />
@@ -52,7 +50,7 @@ internal sealed class ElasticsearchDataModelMapper<TRecord> :
 
         // Extract key property.
 
-        var keyProperty = _properties.Single(x => x.Key is VectorStoreRecordKeyProperty);
+        var keyProperty = _propertyToStorageName.Single(x => x.Key is VectorStoreRecordKeyProperty);
         var keyValue = document[keyProperty.Value]!.AsValue();
 
         var id = keyValue.GetValue<string?>();
@@ -70,7 +68,7 @@ internal sealed class ElasticsearchDataModelMapper<TRecord> :
     {
         // Add key property to document.
 
-        var keyProperty = _properties.Single(x => x.Key is VectorStoreRecordKeyProperty);
+        var keyProperty = _propertyToStorageName.Single(x => x.Key is VectorStoreRecordKeyProperty);
         storageModel.document.Add(keyProperty.Value, storageModel.id);
 
         // Serialize the whole model into the user-defined record type.

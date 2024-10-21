@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using Elastic.Clients.Elasticsearch;
@@ -23,22 +21,23 @@ internal sealed class ElasticsearchGenericDataModelMapper :
     private readonly IElasticsearchClientSettings _elasticsearchClientSettings;
 
     /// <summary>A mapping from <see cref="VectorStoreRecordDefinition" /> to storage model property name.</summary>
-    private readonly Dictionary<VectorStoreRecordProperty, string> _properties;
+    private readonly Dictionary<VectorStoreRecordProperty, string> _propertyToStorageName;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ElasticsearchGenericDataModelMapper" /> class.
     /// </summary>
-    /// <param name="propertyReader">A helper to access property information for the current data model and record definition.</param>
+    /// <param name="propertyToStorageName">A mapping from <see cref="VectorStoreRecordDefinition" /> to storage model property name.</param>
     /// <param name="elasticsearchClientSettings">The Elasticsearch client settings to use.</param>
     public ElasticsearchGenericDataModelMapper(
-        VectorStoreRecordPropertyReader propertyReader,
+        Dictionary<VectorStoreRecordProperty, string> propertyToStorageName,
         IElasticsearchClientSettings elasticsearchClientSettings)
     {
-        Verify.NotNull(propertyReader);
+        Verify.NotNull(propertyToStorageName);
+        Verify.NotNull(elasticsearchClientSettings);
 
         // Assign.
         _elasticsearchClientSettings = elasticsearchClientSettings;
-        _properties = propertyReader.Properties.ToDictionary(k => k, v => elasticsearchClientSettings.DefaultFieldNameInferrer(v.DataModelPropertyName!));
+        _propertyToStorageName = propertyToStorageName;
     }
 
     /// <inheritdoc />
@@ -48,7 +47,7 @@ internal sealed class ElasticsearchGenericDataModelMapper :
 
         var document = new JsonObject();
 
-        foreach (var item in _properties)
+        foreach (var item in _propertyToStorageName)
         {
             var property = item.Key;
             var storageModelPropertyName = item.Value;
@@ -86,7 +85,7 @@ internal sealed class ElasticsearchGenericDataModelMapper :
 
         var dataModel = new VectorStoreGenericDataModel<string>(storageModel.id!);
 
-        foreach (var item in _properties)
+        foreach (var item in _propertyToStorageName)
         {
             var property = item.Key;
             var storageModelPropertyName = item.Value;
