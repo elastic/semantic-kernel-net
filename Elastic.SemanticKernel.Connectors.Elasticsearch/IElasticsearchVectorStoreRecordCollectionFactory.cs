@@ -1,6 +1,6 @@
 using Elastic.Clients.Elasticsearch;
 
-using Microsoft.SemanticKernel.Data;
+using Microsoft.Extensions.VectorData;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
@@ -27,6 +27,5 @@ public interface IElasticsearchVectorStoreRecordCollectionFactory
     /// <returns>The new instance of <see cref="IVectorStoreRecordCollection{TKey, TRecord}" />.</returns>
     IVectorStoreRecordCollection<TKey, TRecord> CreateVectorStoreRecordCollection<TKey, TRecord>(
         ElasticsearchClient elasticsearchClient, string name, VectorStoreRecordDefinition? vectorStoreRecordDefinition)
-        where TKey : notnull
-        where TRecord : class;
+        where TKey : notnull;
 }

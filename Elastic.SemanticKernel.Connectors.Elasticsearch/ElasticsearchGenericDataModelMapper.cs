@@ -5,8 +5,8 @@ using System.Text.Json.Nodes;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport.Extensions;
 
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Data;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 

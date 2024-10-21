@@ -1,4 +1,4 @@
-using Microsoft.SemanticKernel.Data;
+using Microsoft.Extensions.VectorData;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
@@ -6,7 +6,6 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 ///     Options when creating a <see cref="ElasticsearchVectorStoreRecordCollectionOptions{TRecord}" />.
 /// </summary>
 public sealed class ElasticsearchVectorStoreRecordCollectionOptions<TRecord>
-    where TRecord : class
 {
     /// <summary>
     ///     Gets or sets an optional record definition that defines the schema of the record type.

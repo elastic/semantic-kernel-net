@@ -10,6 +10,7 @@ using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Mapping;
 using Elastic.Transport;
 
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
 
@@ -22,9 +23,7 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 /// </summary>
 /// <typeparam name="TRecord">The data model to use for adding, updating and retrieving data from storage.</typeparam>
 public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
-    IVectorStoreRecordCollection<string, TRecord>,
-    IVectorizedSearch<TRecord>
-    where TRecord : class
+    IVectorStoreRecordCollection<string, TRecord>
 #pragma warning restore CA1711 // Identifiers should not have incorrect suffix
 {
     /// <summary>The name of this database for telemetry purposes.</summary>
@@ -225,10 +224,11 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
         if (!storageModel.HasValue)
         {
-            return null;
+            return default;
         }
 
-        var record = _mapper.MapFromStorageToDataModel(storageModel.Value, new StorageToDataModelMapperOptions());
+        var record = VectorStoreErrorHandler.RunModelConversion(DatabaseName, CollectionName, "get",
+            () => _mapper.MapFromStorageToDataModel(storageModel.Value, new StorageToDataModelMapperOptions()));
 
         return record;
     }
@@ -291,7 +291,8 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
         Verify.NotNull(record);
 
-        var storageModel = _mapper.MapFromDataToStorageModel(record);
+        var storageModel = VectorStoreErrorHandler.RunModelConversion(DatabaseName, CollectionName, "index",
+            () => _mapper.MapFromDataToStorageModel(record));
 
         var id = await RunOperationAsync(
                 "index",
@@ -317,8 +318,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         }
     }
 
-    /// <inheritdoc />
-    public Task<VectorSearchResults<TRecord>> VectorizedSearchAsync<TVector>(TVector vector, VectorSearchOptions? options = default,
+    public Task<VectorSearchResults<TRecord>> VectorizedSearchAsync<TVector>(TVector vector, VectorSearchOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();

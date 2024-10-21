@@ -2,7 +2,7 @@ using Elastic.Clients.Elasticsearch;
 
 using Elastic.SemanticKernel.Connectors.Elasticsearch;
 
-using Microsoft.SemanticKernel.Data;
+using Microsoft.Extensions.VectorData;
 
 namespace Microsoft.SemanticKernel;
 

@@ -5,8 +5,8 @@ using System.Text.Json.Nodes;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport.Extensions;
 
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Data;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
@@ -16,7 +16,6 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 /// </summary>
 internal sealed class ElasticsearchDataModelMapper<TRecord> :
     IVectorStoreRecordMapper<TRecord, (string? id, JsonObject document)>
-    where TRecord : class
 {
     /// <summary>The Elasticsearch client settings.</summary>
     private readonly IElasticsearchClientSettings _elasticsearchClientSettings;

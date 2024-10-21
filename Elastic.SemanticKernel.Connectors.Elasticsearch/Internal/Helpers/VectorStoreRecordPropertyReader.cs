@@ -8,6 +8,8 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Microsoft.Extensions.VectorData;
+
 namespace Microsoft.SemanticKernel.Data;
 
 #pragma warning disable IDE0007, IDE0028, IDE0032, IDE0059

@@ -6,6 +6,7 @@ using System.Threading;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
 
@@ -65,7 +66,6 @@ public sealed class ElasticsearchVectorStore :
     public IVectorStoreRecordCollection<TKey, TRecord> GetCollection<TKey, TRecord>(string name,
         VectorStoreRecordDefinition? vectorStoreRecordDefinition = null)
         where TKey : notnull
-        where TRecord : class
     {
         if (typeof(TKey) != typeof(string))
         {

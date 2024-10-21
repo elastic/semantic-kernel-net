@@ -4,6 +4,8 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
+using Microsoft.Extensions.VectorData;
+
 namespace Microsoft.SemanticKernel.Data;
 
 /// <summary>

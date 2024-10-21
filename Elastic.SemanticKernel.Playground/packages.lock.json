@@ -39,6 +39,11 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.1"
         }
       },
+      "Microsoft.Extensions.VectorData.Abstractions": {
+        "type": "Transitive",
+        "resolved": "9.0.0-preview.1.24518.1",
+        "contentHash": "Vqk6n5xgL41dmUUT57iela7UkyGykWGoP/xGDxjx6Kfx9amVRnXma4Me7zwz15I5NUra6xPkBCLYArZ1jHhsyQ=="
+      },
       "System.Diagnostics.DiagnosticSource": {
         "type": "Transitive",
         "resolved": "8.0.1",
@@ -48,23 +53,24 @@
         "type": "Project",
         "dependencies": {
           "Elastic.Clients.Elasticsearch": "[8.15.10, )",
-          "Microsoft.SemanticKernel.Abstractions": "[1.22.0, )",
+          "Microsoft.SemanticKernel.Abstractions": "[1.24.1, )",
           "MinVer": "[6.0.0, )",
           "System.Text.Json": "[8.0.5, )"
         }
       },
       "Microsoft.SemanticKernel.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[1.22.0, )",
-        "resolved": "1.22.0",
-        "contentHash": "dWgmsv+t1/6mP4+19ODW5S5jCmfxE4yjcnOoT0u+KtfMbWQ9GOGXOyXqxmTw85kxzFofIS0iBWdMM+cv8LNqHg==",
+        "requested": "[1.24.1, )",
+        "resolved": "1.24.1",
+        "contentHash": "uLS6LljMkF6Q6KyGF1bzvx601fUYGGpXJgGPmKZIBKDEOLWagicoWf0LRHqOSvN3AJcF4c1I9OZVC4OR5KZ2AA==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
           "Microsoft.Bcl.HashCode": "1.1.1",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.1",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.1",
+          "Microsoft.Extensions.VectorData.Abstractions": "9.0.0-preview.1.24518.1",
           "System.Diagnostics.DiagnosticSource": "8.0.1",
-          "System.Text.Json": "8.0.4"
+          "System.Text.Json": "8.0.5"
         }
       },
       "MinVer": {
