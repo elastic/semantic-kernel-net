@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Mapping;
+using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
 
 using Microsoft.Extensions.VectorData;
@@ -34,6 +35,9 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
     [
         typeof(string)
     ];
+
+    /// <summary>The default options for vector search.</summary>
+    private static readonly VectorSearchOptions DefaultVectorSearchOptions = new();
 
     /// <summary>Elasticsearch client that can be used to manage the collections and points in an Elasticsearch store.</summary>
     private readonly MockableElasticsearchClient _elasticsearchClient;
@@ -142,6 +146,8 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
         // Validate property types.
         _propertyReader.VerifyKeyProperties(SupportedKeyTypes);
+
+        // TODO: Validate other properties. E.g. vectors should be float arrays, full-text-searchable data properties should be of type string, etc.
     }
 
     /// <inheritdoc />
@@ -318,10 +324,76 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         }
     }
 
-    public Task<VectorSearchResults<TRecord>> VectorizedSearchAsync<TVector>(TVector vector, VectorSearchOptions? options = null,
+    public async Task<VectorSearchResults<TRecord>> VectorizedSearchAsync<TVector>(TVector vector, VectorSearchOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        Verify.NotNull(vector);
+
+        // Validate inputs.
+
+        if (this._propertyReader.FirstVectorPropertyName is null)
+        {
+            throw new InvalidOperationException("The collection does not have any vector fields, so vector search is not possible.");
+        }
+
+        var floatVector = vector switch
+        {
+            ICollection<float> v => v,
+            IReadOnlyCollection<float> v => [.. v],
+            ReadOnlyMemory<float> v => v.ToArray(),
+            _ => throw new NotSupportedException($"The provided vector type {vector.GetType().FullName} is not supported by the Elasticsearch connector.")
+        };
+
+        var searchOptions = options ?? DefaultVectorSearchOptions;
+
+        // Specify the vector name.
+
+        var vectorProperty = _propertyReader.VectorProperties[0];
+        if (!string.IsNullOrWhiteSpace(searchOptions.VectorPropertyName))
+        {
+            vectorProperty = _propertyReader.VectorProperties.First(x => string.Equals(x.DataModelPropertyName, searchOptions.VectorPropertyName, StringComparison.Ordinal));
+        }
+
+        // Build search query.
+
+        var knnQuery = new KnnQuery
+        {
+            Field = _propertyToStorageName[vectorProperty]!,
+            QueryVector = floatVector.ToArray()
+        };
+
+        var filterQueries = ElasticsearchVectorStoreCollectionSearchMapping.BuildFilter(searchOptions.Filter, _propertyToStorageName);
+        if (filterQueries.Count != 0)
+        {
+            knnQuery.Filter = filterQueries;
+        }
+
+        // Execute search query.
+
+        var result = await RunOperationAsync(
+                "search",
+                () => _elasticsearchClient.SearchAsync(
+                    CollectionName,
+                    Query.Knn(knnQuery),
+                    searchOptions.Skip,
+                    searchOptions.Top,
+                    cancellationToken: cancellationToken))
+            .ConfigureAwait(false);
+
+        // Map results.
+
+        var mappedResults = result.hits.Select(x =>
+            new VectorSearchResult<TRecord>(
+                VectorStoreErrorHandler.RunModelConversion(DatabaseName, CollectionName, "search",
+                    () => _mapper.MapFromStorageToDataModel((x.id, x.document), new StorageToDataModelMapperOptions())),
+                x.score
+            )
+        );
+
+        return new VectorSearchResults<TRecord>(mappedResults.ToAsyncEnumerable())
+        {
+            TotalCount = searchOptions.IncludeTotalCount ? (result.total is var total and >= 0) ? total : null : null
+        };
     }
 
     /// <summary>

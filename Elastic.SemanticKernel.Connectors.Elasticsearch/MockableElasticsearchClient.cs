@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Clients.Elasticsearch.Mapping;
+using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
 
 using Microsoft.SemanticKernel;
@@ -230,6 +231,42 @@ internal class MockableElasticsearchClient
         {
             throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
         }
+    }
+
+    /// <summary>
+    /// TODO: TBC
+    /// </summary>
+    /// <param name="indexName"></param>
+    /// <param name="query"></param>
+    /// <param name="from"></param>
+    /// <param name="size"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <exception cref="TransportException"></exception>
+    public virtual async Task<(long total, (string id, JsonObject document, double? score)[] hits)> SearchAsync(
+        IndexName indexName,
+        Query query,
+        int? from,
+        int? size,
+        CancellationToken cancellationToken = default)
+    {
+        Verify.NotNull(indexName);
+        Verify.NotNull(query);
+
+        var response = await ElasticsearchClient
+            .SearchAsync<JsonObject>(indexName, x => x
+                .Query(query)
+                .From(from)
+                .Size(size),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccess())
+        {
+            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
+        }
+
+        return (response.Total, [.. response.Hits.Select(hit => (hit.Id!, hit.Source!, hit.Score))]);
     }
 }
 
