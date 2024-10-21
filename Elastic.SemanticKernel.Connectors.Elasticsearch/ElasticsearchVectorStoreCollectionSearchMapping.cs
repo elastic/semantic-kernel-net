@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.Mapping;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 
 using Microsoft.Extensions.VectorData;
@@ -37,15 +36,14 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
 
         foreach (var filterClause in filterClauses)
         {
-            // TODO: Implement full text search
-
             switch (filterClause)
             {
                 case EqualToFilterClause equalToClause:
                 {
-                    var field = GetPropertyMapping(equalToClause.FieldName).Value;
+                    var mapping = GetPropertyNameMapping(equalToClause.FieldName);
+                    VerifyFilterable(mapping.Key);
 
-                    filterQueries.Add(Query.Term(new TermQuery(field!)
+                    filterQueries.Add(Query.Term(new TermQuery(mapping.Value!)
                     {
                         Value = FieldValueFromValue(equalToClause.Value)
                     }));
@@ -54,16 +52,13 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
                 }
                 case AnyTagEqualToFilterClause anyTagEqualToClause:
                 {
-                    var field = GetPropertyMapping(anyTagEqualToClause.FieldName).Value;
+                    var mapping = GetPropertyNameMapping(anyTagEqualToClause.FieldName);
+                    VerifyFilterable(mapping.Key);
 
-                    // TODO: Replace with TermsQuery
-                    filterQueries.Add(Query.TermsSet(new TermsSetQuery(field!)
+                    filterQueries.Add(Query.Terms(new TermsQuery
                     {
-                        Terms = [FieldValueFromValue(anyTagEqualToClause.Value)],
-                        MinimumShouldMatchScript = new Script
-                        {
-                            Source = "1"
-                        }
+                        Field = mapping.Value!,
+                        Term = new TermsQueryField([FieldValueFromValue(anyTagEqualToClause.Value)])
                     }));
 
                     break;
@@ -76,7 +71,7 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
 
         return filterQueries;
 
-        KeyValuePair<VectorStoreRecordProperty, string> GetPropertyMapping(string dataModelPropertyName)
+        KeyValuePair<VectorStoreRecordProperty, string> GetPropertyNameMapping(string dataModelPropertyName)
         {
             var result = propertyToStorageName
                 .FirstOrDefault(x => string.Equals(x.Key.DataModelPropertyName, dataModelPropertyName, StringComparison.Ordinal));
@@ -87,6 +82,14 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
             }
 
             return result;
+        }
+
+        static void VerifyFilterable(VectorStoreRecordProperty property)
+        {
+            if (property is not VectorStoreRecordDataProperty { IsFilterable: true })
+            {
+                throw new NotSupportedException($"Property '{property.DataModelPropertyName}' can not be used for filtering.");
+            }
         }
     }
 

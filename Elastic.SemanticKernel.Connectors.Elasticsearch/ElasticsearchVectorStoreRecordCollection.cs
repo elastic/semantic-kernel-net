@@ -146,8 +146,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
         // Validate property types.
         _propertyReader.VerifyKeyProperties(SupportedKeyTypes);
-
-        // TODO: Validate other properties. E.g. vectors should be float arrays, full-text-searchable data properties should be of type string, etc.
+        VectorStoreRecordPropertyVerification.VerifyPropertyTypes(_propertyReader.VectorProperties, [typeof(ReadOnlyMemory<float>)], [typeof(float)], "Vector");
     }
 
     /// <inheritdoc />
@@ -164,36 +163,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
     /// <inheritdoc />
     public Task CreateCollectionAsync(CancellationToken cancellationToken = default)
     {
-        var propertyMappings = new Properties();
-
-        var vectorProperties = _propertyReader.VectorProperties;
-        foreach (var property in vectorProperties)
-        {
-            propertyMappings.Add(_propertyToStorageName[property],
-                new DenseVectorProperty
-                {
-                    Dims = property.Dimensions,
-                    Index = true,
-                    Similarity = ElasticsearchVectorStoreCollectionCreateMapping.GetSimilarityFunction(property),
-                    IndexOptions = new DenseVectorIndexOptions
-                    {
-                        Type = ElasticsearchVectorStoreCollectionCreateMapping.GetIndexKind(property)
-                    }
-                });
-        }
-
-        var dataProperties = _propertyReader.DataProperties;
-        foreach (var property in dataProperties)
-        {
-            if (property.IsFullTextSearchable)
-            {
-                propertyMappings.Add(_propertyToStorageName[property], new TextProperty());
-            }
-            else
-            {
-                propertyMappings.Add(_propertyToStorageName[property], new KeywordProperty());
-            }
-        }
+        var propertyMappings = ElasticsearchVectorStoreCollectionCreateMapping.BuildPropertyMappings(_propertyReader, _propertyToStorageName);
 
         return RunOperationAsync(
             "indices.create",
