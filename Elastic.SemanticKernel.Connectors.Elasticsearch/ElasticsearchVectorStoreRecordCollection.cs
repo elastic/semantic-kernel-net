@@ -30,12 +30,6 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
     /// <summary>The name of this database for telemetry purposes.</summary>
     private const string DatabaseName = "Elasticsearch";
 
-    /// <summary>The name of the upsert operation for telemetry purposes.</summary>
-    private const string UpsertName = "Upsert";
-
-    /// <summary>The name of the Delete operation for telemetry purposes.</summary>
-    private const string DeleteName = "Delete";
-
     /// <summary>A set of types that a key on the provided model may have.</summary>
     private static readonly HashSet<Type> SupportedKeyTypes =
     [
@@ -158,7 +152,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
     public Task<bool> CollectionExistsAsync(CancellationToken cancellationToken = default)
     {
         return RunOperationAsync(
-            "CollectionExists",
+            "indices.exists",
             () => _elasticsearchClient.IndexExistsAsync(CollectionName, cancellationToken));
     }
 
@@ -197,7 +191,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         }
 
         return RunOperationAsync(
-            "CreateCollection",
+            "indices.create",
             () => _elasticsearchClient.CreateIndexAsync(CollectionName, propertyMappings, cancellationToken));
     }
 
@@ -214,7 +208,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
     public Task DeleteCollectionAsync(CancellationToken cancellationToken = default)
     {
         return RunOperationAsync(
-            "DeleteCollection",
+            "indices.delete",
             () => _elasticsearchClient.DeleteIndexAsync(CollectionName, cancellationToken));
     }
 
@@ -225,7 +219,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         // TODO: Handle options
 
         var storageModel = await RunOperationAsync(
-                "Get",
+                "get",
                 () => _elasticsearchClient.GetDocumentAsync(CollectionName, key, cancellationToken))
             .ConfigureAwait(false);
 
@@ -269,7 +263,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         Verify.NotNullOrWhiteSpace(key);
 
         await RunOperationAsync(
-                DeleteName,
+                "delete",
                 () => _elasticsearchClient.DeleteDocumentAsync(CollectionName, key, cancellationToken))
             .ConfigureAwait(false);
     }
@@ -300,7 +294,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
         var storageModel = _mapper.MapFromDataToStorageModel(record);
 
         var id = await RunOperationAsync(
-                UpsertName,
+                "index",
                 () => _elasticsearchClient.IndexDocumentAsync(CollectionName, storageModel.id!, storageModel.document,
                     cancellationToken))
             .ConfigureAwait(false);
