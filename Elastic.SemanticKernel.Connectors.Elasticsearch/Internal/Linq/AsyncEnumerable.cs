@@ -100,10 +100,13 @@ internal static class AsyncEnumerable
 
     public static async ValueTask<int> CountAsync<T>(this IAsyncEnumerable<T> source, CancellationToken cancellationToken = default)
     {
-        int count = 0;
+        var count = 0;
         await foreach (var _ in source.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
-            checked { count++; }
+            checked
+            {
+                count++;
+            }
         }
 
         return count;
