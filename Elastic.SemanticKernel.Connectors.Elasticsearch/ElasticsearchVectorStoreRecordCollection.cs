@@ -149,7 +149,10 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
         // Validate property types.
         _propertyReader.VerifyKeyProperties(SupportedKeyTypes);
-        VectorStoreRecordPropertyVerification.VerifyPropertyTypes(_propertyReader.VectorProperties, [typeof(ReadOnlyMemory<float>)], [typeof(float)], "Vector");
+        VectorStoreRecordPropertyVerification.VerifyPropertyTypes(_propertyReader.VectorProperties,
+            [typeof(ReadOnlyMemory<float>), typeof(ReadOnlyMemory<float>?)],
+            [typeof(float)],
+            "Vector");
     }
 
     /// <inheritdoc />
