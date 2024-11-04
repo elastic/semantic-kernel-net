@@ -54,7 +54,7 @@
         "resolved": "8.0.1",
         "contentHash": "vaoWjvkG1aenR2XdjaVivlCV9fADfgyhW5bZtXT23qaEea0lWiUljdQuze4E31vKM7ZWJaSUsbYIKE3rnzfZUg=="
       },
-      "Microsoft.SemanticKernel.Connectors.Elasticsearch": {
+      "elastic.semantickernel.connectors.elasticsearch": {
         "type": "Project",
         "dependencies": {
           "Elastic.Clients.Elasticsearch": "[8.15.10, )",

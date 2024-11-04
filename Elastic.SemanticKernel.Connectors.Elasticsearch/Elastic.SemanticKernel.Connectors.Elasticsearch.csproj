@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8</TargetFrameworks>
 
-    <PackageId>Microsoft.SemanticKernel.Connectors.Elasticsearch</PackageId>
+    <PackageId>Elastic.SemanticKernel.Connectors.Elasticsearch</PackageId>
     <Title>Elasticsearch connector for Microsoft Semantic Kernel</Title>
     <Description>Elasticsearch connector for Microsoft Semantic Kernel.</Description>
     <AssemblyTitle>$(Title)</AssemblyTitle>
