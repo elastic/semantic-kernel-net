@@ -1,3 +1,8 @@
+// Licensed to Elasticsearch B.V under one or more agreements.
+// Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -33,7 +38,18 @@ internal class MockableElasticsearchClient
     {
         Verify.NotNull(elasticsearchClient);
 
-        ElasticsearchClient = elasticsearchClient;
+        // Create a private instance of the ElasticsearchClient based on the settings of the original instance.
+
+        if (elasticsearchClient.ElasticsearchClientSettings is not ElasticsearchClientSettings settings)
+        {
+            throw new NotSupportedException("Unsupported Elasticsearch client instance.");
+        }
+
+        // TODO: Clone Settings
+
+        settings.UserAgent(UserAgent.Create($"{elasticsearchClient.ElasticsearchClientSettings.UserAgent}; integration=MSSK"));
+
+        ElasticsearchClient = new ElasticsearchClient(settings);
     }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.

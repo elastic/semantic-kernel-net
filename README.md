@@ -2,7 +2,8 @@
 
 # Elasticsearch connector for Microsoft Semantic Kernel
 
-To be replaced with a meaningful description.
+Repository for `Elastic.SemanticKernel.Connectors.Elasticsearch` the official Elasticsearch connector for
+Microsoft Semantic Kernel.
 
 .
 
