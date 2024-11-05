@@ -80,7 +80,7 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
             return DenseVectorIndexOptionsType.Int8Hnsw;
         }
 
-        return vectorProperty.DistanceFunction switch
+        return vectorProperty.IndexKind switch
         {
             IndexKind.Hnsw => DenseVectorIndexOptionsType.Hnsw,
             int8HnswIndexKind => DenseVectorIndexOptionsType.Int8Hnsw,
