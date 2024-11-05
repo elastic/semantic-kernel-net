@@ -29,7 +29,7 @@ public static class ElasticsearchServiceCollectionExtensions
         // cannot make assumptions about how ElasticsearchClient is being managed.
         services.AddKeyedTransient<IVectorStore>(
             serviceId,
-            (sp, obj) =>
+            (sp, _) =>
             {
                 var elasticsearchClient = sp.GetRequiredService<ElasticsearchClient>();
                 var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreOptions>();
@@ -43,20 +43,20 @@ public static class ElasticsearchServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStore"/> with the specified service ID and where <see cref="ElasticsearchClient"/> is constructed using the provided settings.
+    /// Register an Elasticsearch <see cref="IVectorStore"/> with the specified service ID and where <see cref="ElasticsearchClient"/> is constructed using the provided client settings.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="IVectorStore"/> on.</param>
-    /// <param name="settings">The Elasticsearch client settings.</param>
+    /// <param name="clientSettings">The Elasticsearch client settings.</param>
     /// <param name="options">Optional options to further configure the <see cref="IVectorStore"/>.</param>
     /// <param name="serviceId">An optional service id to use as the service key.</param>
     /// <returns>The service collection.</returns>
-    public static IServiceCollection AddElasticsearchVectorStore(this IServiceCollection services, IElasticsearchClientSettings settings, ElasticsearchVectorStoreOptions? options = default, string? serviceId = default)
+    public static IServiceCollection AddElasticsearchVectorStore(this IServiceCollection services, IElasticsearchClientSettings clientSettings, ElasticsearchVectorStoreOptions? options = default, string? serviceId = default)
     {
         services.AddKeyedSingleton<IVectorStore>(
             serviceId,
-            (sp, obj) =>
+            (sp, _) =>
             {
-                var elasticsearchClient = new ElasticsearchClient(settings);
+                var elasticsearchClient = new ElasticsearchClient(clientSettings);
                 var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreOptions>();
 
                 return new ElasticsearchVectorStore(
@@ -65,5 +65,91 @@ public static class ElasticsearchServiceCollectionExtensions
             });
 
         return services;
+    }
+
+    /// <summary>
+    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorizedSearch{TRecord}"/> with the specified service ID
+    /// and where the <see cref="ElasticsearchClient"/> is retrieved from the dependency injection container.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key.</typeparam>
+    /// <typeparam name="TRecord">The type of the record.</typeparam>
+    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> on.</param>
+    /// <param name="collectionName">The name of the collection.</param>
+    /// <param name="options">Optional options to further configure the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/>.</param>
+    /// <param name="serviceId">An optional service id to use as the service key.</param>
+    /// <returns>Service collection.</returns>
+    public static IServiceCollection AddElasticsearchVectorStoreRecordCollection<TKey, TRecord>(
+        this IServiceCollection services,
+        string collectionName,
+        ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
+        string? serviceId = default)
+        where TKey : notnull
+    {
+        services.AddKeyedTransient<IVectorStoreRecordCollection<TKey, TRecord>>(
+            serviceId,
+            (sp, _) =>
+            {
+                var elasticsearchClient = sp.GetRequiredService<ElasticsearchClient>();
+                var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>();
+
+                return (new ElasticsearchVectorStoreRecordCollection<TRecord>(elasticsearchClient, collectionName, selectedOptions) as IVectorStoreRecordCollection<TKey, TRecord>)!;
+            });
+
+        AddVectorizedSearch<TKey, TRecord>(services, serviceId);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorizedSearch{TRecord}"/> with the specified service ID
+    /// and where the <see cref="ElasticsearchClient"/> is constructed using the provided client settings.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key.</typeparam>
+    /// <typeparam name="TRecord">The type of the record.</typeparam>
+    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> on.</param>
+    /// <param name="collectionName">The name of the collection.</param>
+    /// <param name="clientSettings">The Elasticsearch client settings.</param>
+    /// <param name="options">Optional options to further configure the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/>.</param>
+    /// <param name="serviceId">An optional service id to use as the service key.</param>
+    /// <returns>Service collection.</returns>
+    public static IServiceCollection AddElasticsearchVectorStoreRecordCollection<TKey, TRecord>(
+        this IServiceCollection services,
+        string collectionName,
+        IElasticsearchClientSettings clientSettings,
+        ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
+        string? serviceId = default)
+        where TKey : notnull
+    {
+        services.AddKeyedSingleton<IVectorStoreRecordCollection<TKey, TRecord>>(
+            serviceId,
+            (sp, _) =>
+            {
+                var elasticsearchClient = new ElasticsearchClient(clientSettings);
+                var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>();
+
+                return (new ElasticsearchVectorStoreRecordCollection<TRecord>(elasticsearchClient, collectionName, selectedOptions) as IVectorStoreRecordCollection<TKey, TRecord>)!;
+            });
+
+        AddVectorizedSearch<TKey, TRecord>(services, serviceId);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Also register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> with the given <paramref name="serviceId"/> as a <see cref="IVectorizedSearch{TRecord}"/>.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key.</typeparam>
+    /// <typeparam name="TRecord">The type of the data model that the collection should contain.</typeparam>
+    /// <param name="services">The service collection to register on.</param>
+    /// <param name="serviceId">The service id that the registrations should use.</param>
+    private static void AddVectorizedSearch<TKey, TRecord>(IServiceCollection services, string? serviceId)
+        where TKey : notnull
+    {
+        services.AddKeyedTransient<IVectorizedSearch<TRecord>>(
+            serviceId,
+            (sp, _) =>
+            {
+                return sp.GetRequiredKeyedService<IVectorStoreRecordCollection<TKey, TRecord>>(serviceId);
+            });
     }
 }
