@@ -3,16 +3,15 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <!--<CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>-->
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.15.10" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Abstractions" Version="1.26.0" />
+    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.16.1" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Abstractions" Version="1.29.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
   <ItemGroup>
-    <!--<GlobalPackageReference Include="Microsoft.Build.CopyOnWrite" Version="1.0.315" />-->
+    <GlobalPackageReference Include="Microsoft.Build.CopyOnWrite" Version="1.0.334" />
   </ItemGroup>
 </Project>

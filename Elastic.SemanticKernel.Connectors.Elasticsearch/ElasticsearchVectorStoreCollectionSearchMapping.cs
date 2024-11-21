@@ -62,7 +62,7 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
                     filterQueries.Add(Query.Terms(new TermsQuery
                     {
                         Field = mapping.Value!,
-                        Term = new TermsQueryField([FieldValueFromValue(anyTagEqualToClause.Value)])
+                        Terms = new TermsQueryField([FieldValueFromValue(anyTagEqualToClause.Value)])
                     }));
 
                     break;
