@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -29,7 +28,7 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 /// </summary>
 internal class MockableElasticsearchClient
 {
-    private static readonly RequestConfiguration CustomUserAgentRequestConfiguration = new RequestConfiguration
+    private static readonly RequestConfiguration CustomUserAgentRequestConfiguration = new()
     {
         UserAgent = UserAgent.Create("elasticsearch-net", typeof(IElasticsearchClientSettings), ["integration=MSSK"])
     };
