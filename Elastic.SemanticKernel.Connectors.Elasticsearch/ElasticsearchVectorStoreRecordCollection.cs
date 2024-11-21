@@ -307,7 +307,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TRecord> :
 
         // Validate inputs.
 
-        if (this._propertyReader.FirstVectorPropertyName is null)
+        if (_propertyReader.FirstVectorPropertyName is null)
         {
             throw new InvalidOperationException("The collection does not have any vector fields, so vector search is not possible.");
         }

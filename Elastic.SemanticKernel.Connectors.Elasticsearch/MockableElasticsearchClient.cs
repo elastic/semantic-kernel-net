@@ -17,6 +17,8 @@ using Elastic.Transport;
 
 using Microsoft.SemanticKernel;
 
+using ExistsRequest = Elastic.Clients.Elasticsearch.IndexManagement.ExistsRequest;
+
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
 #pragma warning disable CA1852 // TODO: Remove after using MockableElasticsearchClient in unit tests
@@ -27,6 +29,11 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 /// </summary>
 internal class MockableElasticsearchClient
 {
+    private static readonly RequestConfiguration CustomUserAgentRequestConfiguration = new RequestConfiguration
+    {
+        UserAgent = UserAgent.Create("elasticsearch-net", typeof(IElasticsearchClientSettings), ["integration=MSSK"])
+    };
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="MockableElasticsearchClient" /> class.
     /// </summary>
@@ -38,18 +45,7 @@ internal class MockableElasticsearchClient
     {
         Verify.NotNull(elasticsearchClient);
 
-        // Create a private instance of the ElasticsearchClient based on the settings of the original instance.
-
-        if (elasticsearchClient.ElasticsearchClientSettings is not ElasticsearchClientSettings settings)
-        {
-            throw new NotSupportedException("Unsupported Elasticsearch client instance.");
-        }
-
-        // TODO: Clone Settings
-
-        settings.UserAgent(UserAgent.Create($"{elasticsearchClient.ElasticsearchClientSettings.UserAgent}; integration=MSSK"));
-
-        ElasticsearchClient = new ElasticsearchClient(settings);
+        ElasticsearchClient = elasticsearchClient;
     }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -77,7 +73,12 @@ internal class MockableElasticsearchClient
     public virtual async Task<IReadOnlyList<string>> ListIndicesAsync(CancellationToken cancellationToken = default)
     {
         var response = await ElasticsearchClient.Indices
-            .StatsAsync(cancellationToken)
+            .StatsAsync(
+                new IndicesStatsRequest
+                {
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccess())
@@ -102,7 +103,12 @@ internal class MockableElasticsearchClient
         Verify.NotNull(indexName);
 
         var response = await ElasticsearchClient.Indices
-            .ExistsAsync(indexName, cancellationToken)
+            .ExistsAsync(
+                new ExistsRequest(indexName)
+                {
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccess())
@@ -129,13 +135,15 @@ internal class MockableElasticsearchClient
         Verify.NotNull(indexName);
 
         var response = await ElasticsearchClient.Indices
-            .CreateAsync(new CreateIndexRequest(indexName)
-            {
-                Mappings = new TypeMapping
+            .CreateAsync(
+                new CreateIndexRequest(indexName)
                 {
-                    Properties = properties
-                }
-            },
+                    Mappings = new TypeMapping
+                    {
+                        Properties = properties
+                    },
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -158,7 +166,12 @@ internal class MockableElasticsearchClient
     {
         Verify.NotNull(indexName);
 
-        var response = await ElasticsearchClient.Indices.DeleteAsync(indexName, cancellationToken)
+        var response = await ElasticsearchClient.Indices.DeleteAsync(
+                new DeleteIndexRequest(indexName)
+                {
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccess())
@@ -176,7 +189,12 @@ internal class MockableElasticsearchClient
         Verify.NotNull(id);
 
         var response = await ElasticsearchClient
-            .GetAsync<JsonObject>(indexName, id, x => { }, cancellationToken)
+            .GetAsync<JsonObject>(
+                new GetRequest(indexName, id)
+                {
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccess())
@@ -212,7 +230,12 @@ internal class MockableElasticsearchClient
         Verify.NotNull(document);
 
         var response = await ElasticsearchClient
-            .IndexAsync(document, indexName, id, cancellationToken)
+            .IndexAsync(
+                new IndexRequest<TDocument>(document, indexName, id)
+                {
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccess())
@@ -240,7 +263,12 @@ internal class MockableElasticsearchClient
         Verify.NotNull(id);
 
         var response = await ElasticsearchClient
-            .DeleteAsync(indexName, id, cancellationToken)
+            .DeleteAsync(
+                new DeleteRequest(indexName, id)
+                {
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccess())
@@ -270,11 +298,16 @@ internal class MockableElasticsearchClient
         Verify.NotNull(query);
 
         var response = await ElasticsearchClient
-            .SearchAsync<JsonObject>(indexName, x => x
-                .Query(query)
-                .From(from)
-                .Size(size),
-                cancellationToken)
+            .SearchAsync<JsonObject>(
+                new SearchRequest(indexName)
+                {
+                    Query = query,
+                    From = from,
+                    Size = size,
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken
+            )
             .ConfigureAwait(false);
 
         if (!response.IsSuccess())

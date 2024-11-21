@@ -4,17 +4,23 @@
     "net8.0": {
       "Elastic.Clients.Elasticsearch": {
         "type": "Direct",
-        "requested": "[8.15.10, )",
-        "resolved": "8.15.10",
-        "contentHash": "WxbKk/PvNOhhGLkaqdrQwNWxiDtOYQJYZK6VwOkV65r7kQO+cpmjkYr/FoJ4ArfHFzZJf77VHNyvFSWDe3Vqzw==",
+        "requested": "[8.16.1, )",
+        "resolved": "8.16.1",
+        "contentHash": "IIqNXo1hS15aXSfr3f+QzYJqj7k01vx075VJT4d4/oQdpN4HL3IRfnhcgPHMVQSuAw8bY5l3FSztGHT54AwgtQ==",
         "dependencies": {
-          "Elastic.Transport": "0.4.26"
+          "Elastic.Transport": "0.5.5"
         }
+      },
+      "Microsoft.Build.CopyOnWrite": {
+        "type": "Direct",
+        "requested": "[1.0.334, )",
+        "resolved": "1.0.334",
+        "contentHash": "Bi/e5guuwmyPL7Kp1G+PbcDvZFKsZxuHmc39IpYHAhWOvV8I/uIHPwAZ++Fa8k/w6pEqPdHCIrxSCelMNmu0dQ=="
       },
       "Elastic.Transport": {
         "type": "Transitive",
-        "resolved": "0.4.26",
-        "contentHash": "ZbVlxXn9fnZqMOyOESea5n17096Xa8EPI/I9yD65y6yPXZKrs4GcqKTjfYk0jkxsl3n+CpaNureMA+VutpLZzQ=="
+        "resolved": "0.5.5",
+        "contentHash": "sWuMp1yX4R2rHtmZhWVudt5l0zIaqSYCnUtcMrsmfiZxV2qY5WlbViPIH5KdYrI52p71vhScshVJbPDRezm10Q=="
       },
       "Microsoft.Bcl.AsyncInterfaces": {
         "type": "Transitive",
@@ -57,17 +63,17 @@
       "elastic.semantickernel.connectors.elasticsearch": {
         "type": "Project",
         "dependencies": {
-          "Elastic.Clients.Elasticsearch": "[8.15.10, )",
-          "Microsoft.SemanticKernel.Abstractions": "[1.26.0, )",
+          "Elastic.Clients.Elasticsearch": "[8.16.1, )",
+          "Microsoft.SemanticKernel.Abstractions": "[1.29.0, )",
           "MinVer": "[6.0.0, )",
           "System.Text.Json": "[8.0.5, )"
         }
       },
       "Microsoft.SemanticKernel.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[1.26.0, )",
-        "resolved": "1.26.0",
-        "contentHash": "zvSl9tSByc8DZcFR+ii5O4dNg3AskEjtcd5kqp8lJAIhHslyNpR5kD0EkHPaxAsyJyCCD2TR0J1TOUwjBkxDAA==",
+        "requested": "[1.29.0, )",
+        "resolved": "1.29.0",
+        "contentHash": "PJIy7YAkaUtyp9uzRn1wO2lQYb/vuC9jtF7rmoPXe18ugrztnvY8sKyvv+LEMib48cZKfOhxOzQVE/dTa5TjrQ==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
           "Microsoft.Bcl.HashCode": "1.1.1",
