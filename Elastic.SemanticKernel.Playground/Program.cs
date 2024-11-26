@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Elastic.Clients.Elasticsearch;
@@ -59,23 +61,21 @@ internal sealed class Program
         // Crate collection and ingest a few demo records.
         await vectorStoreCollection.CreateCollectionIfNotExistsAsync();
 
-        await vectorStoreCollection.UpsertAsync(new Hotel
-        {
-            HotelId = "1",
-            HotelName = "First Hotel",
-            Description = "The blue hotel.",
-            DescriptionEmbedding = await embeddings.GenerateEmbeddingAsync("The blue hotel."),
-            ReferenceLink = "Global Hotel Database, Entry 1337"
-        });
+        // CSV format: ID;Hotel Name;Description;Reference Link
+        var hotels = (await File.ReadAllLinesAsync("D:\\elastic\\semantic-kernel-net\\hotels.csv"))
+            .Select(x => x.Split(';'));
 
-        await vectorStoreCollection.UpsertAsync(new Hotel
+        foreach (var hotel in hotels)
         {
-            HotelId = "2",
-            HotelName = "Second Hotel",
-            Description = "The green hotel.",
-            DescriptionEmbedding = await embeddings.GenerateEmbeddingAsync("The green hotel."),
-            ReferenceLink = "Global Hotel Database, Entry 4242"
-        });
+            await vectorStoreCollection.UpsertAsync(new Hotel
+            {
+                HotelId = hotel[0],
+                HotelName = hotel[1],
+                Description = hotel[2],
+                DescriptionEmbedding = await embeddings.GenerateEmbeddingAsync(hotel[2]),
+                ReferenceLink = hotel[3]
+            });
+        }
 
         // Invoke the LLM with a template that uses the search plugin to
         // 1. get related information to the user query from the vector store
@@ -98,15 +98,14 @@ internal sealed class Program
                             """,
             arguments: new KernelArguments
             {
-                { "question", "What is the name of the hotel that has the same color as grass?" },
+                { "question", "Please show me all hotels that have a rooftop bar." },
             },
             templateFormat: "handlebars",
             promptTemplateFactory: new HandlebarsPromptTemplateFactory());
 
         Console.WriteLine(response.ToString());
 
-        // > The name of the hotel that has the same color as grass is "Second Hotel."
-        // > This hotel is described as the green hotel. (Source: Global Hotel Database, Entry 4242)
+        // > Urban Chic Hotel has a rooftop bar with stunning views (Source: https://example.com/stu654).
     }
 }
 
