@@ -23,8 +23,8 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 #pragma warning disable CA1852 // TODO: Remove after using MockableElasticsearchClient in unit tests
 
 /// <summary>
-///     Decorator class for <see cref="Elastic.Clients.Elasticsearch.ElasticsearchClient" /> that exposes the required
-///     methods as virtual allowing for mocking in unit tests.
+///     Decorator class for <see cref="ElasticsearchClient" /> that exposes the required methods as virtual allowing
+///     for mocking in unit tests.
 /// </summary>
 internal class MockableElasticsearchClient
 {
