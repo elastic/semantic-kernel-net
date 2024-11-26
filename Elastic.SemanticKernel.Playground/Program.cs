@@ -36,13 +36,7 @@ internal sealed class Program
 
         // Register Elasticsearch vector store.
         var elasticsearchClientSettings = new ElasticsearchClientSettings(new Uri("https://my-elasticsearch-instance.cloud"))
-            .Authentication(new BasicAuthentication("elastic", "my_password"))
-            .DisableDirectStreaming()
-            .EnableDebugMode(cd =>
-            {
-                //var request = System.Text.Encoding.Default.GetString(cd.RequestBodyInBytes);
-                Console.WriteLine(cd.DebugInformation);
-            });
+            .Authentication(new BasicAuthentication("elastic", "my_password"));
         kernelBuilder.AddElasticsearchVectorStoreRecordCollection<string, Hotel>("skhotels", elasticsearchClientSettings);
 
         // Build the host.
@@ -62,19 +56,25 @@ internal sealed class Program
         await vectorStoreCollection.CreateCollectionIfNotExistsAsync();
 
         // CSV format: ID;Hotel Name;Description;Reference Link
-        var hotels = (await File.ReadAllLinesAsync("D:\\elastic\\semantic-kernel-net\\hotels.csv"))
+        var hotels = (await File.ReadAllLinesAsync("hotels.csv"))
             .Select(x => x.Split(';'));
 
-        foreach (var hotel in hotels)
+        foreach (var chunk in hotels.Chunk(25))
         {
-            await vectorStoreCollection.UpsertAsync(new Hotel
+            var descriptionEmbeddings = await embeddings.GenerateEmbeddingsAsync(chunk.Select(x => x[2]).ToArray());
+            
+            for (var i = 0; i < chunk.Length; ++i)
             {
-                HotelId = hotel[0],
-                HotelName = hotel[1],
-                Description = hotel[2],
-                DescriptionEmbedding = await embeddings.GenerateEmbeddingAsync(hotel[2]),
-                ReferenceLink = hotel[3]
-            });
+                var hotel = chunk[i];
+                await vectorStoreCollection.UpsertAsync(new Hotel
+                {
+                    HotelId = hotel[0],
+                    HotelName = hotel[1],
+                    Description = hotel[2],
+                    DescriptionEmbedding = descriptionEmbeddings[i],
+                    ReferenceLink = hotel[3]
+                });
+            }
         }
 
         // Invoke the LLM with a template that uses the search plugin to
