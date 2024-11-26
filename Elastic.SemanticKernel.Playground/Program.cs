@@ -1,131 +1,132 @@
 using System;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 
-using Elastic.SemanticKernel.Connectors.Elasticsearch;
-
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.VectorData;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Data;
+using Microsoft.SemanticKernel.Embeddings;
+using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 
 namespace Elastic.SemanticKernel.Playground;
 
-internal class Program
+#pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
+
+internal sealed class Program
 {
-    static async Task Main(string[] args)
+    public static async Task Main(string[] args)
     {
-        using var settings = new ElasticsearchClientSettings(new Uri("https://primary.es.europe-west3.gcp.cloud.es.io"))
-            .Authentication(new BasicAuthentication("elastic", "g7wuRWPrJF2yAzytvd9w18s8"))
+#pragma warning disable SKEXP0010 // Some SK methods are still experimental
+
+        var builder = Host.CreateApplicationBuilder(args);
+
+        // Register AI services.
+        var kernelBuilder = builder.Services.AddKernel();
+        kernelBuilder.AddAzureOpenAIChatCompletion("gpt-4o", "https://my-service.openai.azure.com", "my_token");
+        kernelBuilder.AddAzureOpenAITextEmbeddingGeneration("ada-002", "https://my-service.openai.azure.com", "my_token");
+
+        // Register text search service.
+        kernelBuilder.AddVectorStoreTextSearch<Hotel>();
+
+        // Register Elasticsearch vector store.
+        var elasticsearchClientSettings = new ElasticsearchClientSettings(new Uri("https://my-elasticsearch-instance.cloud"))
+            .Authentication(new BasicAuthentication("elastic", "my_password"))
             .DisableDirectStreaming()
             .EnableDebugMode(cd =>
             {
+                //var request = System.Text.Encoding.Default.GetString(cd.RequestBodyInBytes);
                 Console.WriteLine(cd.DebugInformation);
             });
+        kernelBuilder.AddElasticsearchVectorStoreRecordCollection<string, Hotel>("skhotels", elasticsearchClientSettings);
 
-        var client = new ElasticsearchClient(settings);
+        // Build the host.
+        using var host = builder.Build();
 
-        var vectorStore = new ElasticsearchVectorStore(client);
+        // For demo purposes, we access the services directly without using a DI context.
 
-        var collection = vectorStore.GetCollection<string, MyRecord>("sk");
+        var kernel = host.Services.GetService<Kernel>()!;
+        var embeddings = host.Services.GetService<ITextEmbeddingGenerationService>()!;
+        var vectorStoreCollection = host.Services.GetService<IVectorStoreRecordCollection<string, Hotel>>()!;
 
-        await collection.CreateCollectionIfNotExistsAsync();
+        // Register search plugin.
+        var textSearch = host.Services.GetService<VectorStoreTextSearch<Hotel>>()!;
+        kernel.Plugins.Add(textSearch.CreateWithGetTextSearchResults("SearchPlugin"));
 
-        await collection.UpsertAsync(new MyRecord
+        // Crate collection and ingest a few demo records.
+        await vectorStoreCollection.CreateCollectionIfNotExistsAsync();
+
+        await vectorStoreCollection.UpsertAsync(new Hotel
         {
-            MyKey = "40",
-            Vec1 = new float[] { 2.1f, 2.0f, 2.2f },
-            Vec2 = new float[] { 1.2f, 1.1f, 1.3f },
-            Data1 = 1337,
-            Data2 = DateTimeKind.Utc,
-            Data3 = ["a", "b", "c"]
+            HotelId = "1",
+            HotelName = "First Hotel",
+            Description = "The blue hotel.",
+            DescriptionEmbedding = await embeddings.GenerateEmbeddingAsync("The blue hotel."),
+            ReferenceLink = "Global Hotel Database, Entry 1337"
         });
 
-        await collection.UpsertAsync(new MyRecord
+        await vectorStoreCollection.UpsertAsync(new Hotel
         {
-            MyKey = "41",
-            Vec1 = new float[] { 0.1f, 0.1f, 1000.1f },
-            Vec2 = new float[] { 1.2f, 1.1f, 1.3f },
-            Data1 = 1338,
-            Data2 = DateTimeKind.Utc,
-            Data3 = ["a", "abba", "c"]
+            HotelId = "2",
+            HotelName = "Second Hotel",
+            Description = "The green hotel.",
+            DescriptionEmbedding = await embeddings.GenerateEmbeddingAsync("The green hotel."),
+            ReferenceLink = "Global Hotel Database, Entry 4242"
         });
 
-        var id = await collection.UpsertAsync(new MyRecord
-        {
-            MyKey = "42",
-            Vec1 = new float[] { 2.2f, 2.1f, 2.3f, 0.0f },
-            Vec2 = new float[] { 1.2f, 1.1f, 1.3f },
-            Data1 = 1337,
-            Data2 = DateTimeKind.Utc,
-            Data3 = ["a", "b", "c"]
-        });
+        // Invoke the LLM with a template that uses the search plugin to
+        // 1. get related information to the user query from the vector store
+        // 2. add the information to the LLM prompt.
+        var response = await kernel.InvokePromptAsync(
+            promptTemplate: """
+                            Please use this information to answer the question:
+                            {{#with (SearchPlugin-GetTextSearchResults question)}}
+                              {{#each this}}
+                                Name: {{Name}}
+                                Value: {{Value}}
+                                Source: {{Link}}
+                                -----------------
+                              {{/each}}
+                            {{/with}}
 
-        var record = await collection.GetAsync(id);
+                            Include the source of relevant information in the response.
 
-        var search = await collection.VectorizedSearchAsync(new float[] { 2.2f, 2.1f, 2.3f }, new VectorSearchOptions
-        {
-            IncludeTotalCount = true,
-            Filter = new VectorSearchFilter(new FilterClause[]
+                            Question: {{question}}
+                            """,
+            arguments: new KernelArguments
             {
-                new AnyTagEqualToFilterClause(nameof(MyRecord.Data3), "abba"),
-                new EqualToFilterClause(nameof(MyRecord.Data1), 1338) // TODO: Test char
-            })
-        });
+                { "question", "What is the name of the hotel that has the same color as grass?" },
+            },
+            templateFormat: "handlebars",
+            promptTemplateFactory: new HandlebarsPromptTemplateFactory());
 
-        var genericCollection = vectorStore.GetCollection<string, VectorStoreGenericDataModel<string>>("sk", new VectorStoreRecordDefinition
-        {
-            Properties =
-            [
-                new VectorStoreRecordKeyProperty(nameof(MyRecord.MyKey), typeof(string)),
-                new VectorStoreRecordVectorProperty(nameof(MyRecord.Vec1), typeof(ReadOnlyMemory<float>))
-                {
-                    StoragePropertyName = "xxx"
-                },
-                new VectorStoreRecordVectorProperty(nameof(MyRecord.Vec2), typeof(ReadOnlyMemory<float>)),
-                new VectorStoreRecordDataProperty(nameof(MyRecord.Data1), typeof(int)),
-                new VectorStoreRecordDataProperty(nameof(MyRecord.Data2), typeof(DateTimeKind)),
-                new VectorStoreRecordDataProperty(nameof(MyRecord.Data3), typeof(string[]))
-            ]
-        });
+        Console.WriteLine(response.ToString());
 
-        var genericRecord = await genericCollection.GetAsync(id);
-        genericRecord.Key = null;
-
-        var id2 = await genericCollection.UpsertAsync(genericRecord);
-        var record2 = await collection.GetAsync(id2);
-
-        await collection.DeleteAsync(id);
-        await collection.DeleteAsync(id2);
-
-        await collection.DeleteCollectionAsync();
+        // > The name of the hotel that has the same color as grass is "Second Hotel."
+        // > This hotel is described as the green hotel. (Source: Global Hotel Database, Entry 4242)
     }
 }
 
-public sealed class MyRecord
+public sealed record Hotel
 {
     [VectorStoreRecordKey]
-    public required string? MyKey { get; init; }
+    public required string HotelId { get; set; }
 
-    [VectorStoreRecordVector(3)]
-    [JsonPropertyName("xxx")]
-    public required IReadOnlyCollection<float> Vec1 { get; init; }
-
-    [VectorStoreRecordVector(3)]
-    public required ReadOnlyMemory<float> Vec2 { get; init; }
-
-    [VectorStoreRecordData(IsFilterable = true, IsFullTextSearchable = true)]
-    public required int Data1 { get; init; }
-
+    [TextSearchResultName]
     [VectorStoreRecordData(IsFilterable = true)]
-    public required DateTimeKind Data2 { get; init; }
+    public required string HotelName { get; set; }
 
-    [VectorStoreRecordData(IsFilterable = true)]
+    [TextSearchResultValue]
+    [VectorStoreRecordData(IsFullTextSearchable = true)]
+    public required string Description { get; set; }
 
-#pragma warning disable CA1819
+    [VectorStoreRecordVector(Dimensions: 1536, DistanceFunction.CosineSimilarity, IndexKind.Hnsw)]
+    public ReadOnlyMemory<float>? DescriptionEmbedding { get; set; }
 
-    public required string[] Data3 { get; init; }
-
-#pragma warning restore CA1819
+    [TextSearchResultLink]
+    [VectorStoreRecordData]
+    public string? ReferenceLink { get; set; }
 }
