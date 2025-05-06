@@ -7,6 +7,7 @@ using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.DependencyInjection;
 using Elastic.SemanticKernel.Connectors.Elasticsearch;
 
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 
 namespace Microsoft.SemanticKernel;
@@ -23,7 +24,10 @@ public static class ElasticsearchServiceCollectionExtensions
     /// <param name="options">Optional options to further configure the <see cref="IVectorStore"/>.</param>
     /// <param name="serviceId">An optional service id to use as the service key.</param>
     /// <returns>The service collection.</returns>
-    public static IServiceCollection AddElasticsearchVectorStore(this IServiceCollection services, ElasticsearchVectorStoreOptions? options = default, string? serviceId = default)
+    public static IServiceCollection AddElasticsearchVectorStore(
+        this IServiceCollection services,
+        ElasticsearchVectorStoreOptions? options = default,
+        string? serviceId = default)
     {
         // If we are not constructing the ElasticsearchClient, add the IVectorStore as transient, since we
         // cannot make assumptions about how ElasticsearchClient is being managed.
@@ -32,11 +36,12 @@ public static class ElasticsearchServiceCollectionExtensions
             (sp, _) =>
             {
                 var elasticsearchClient = sp.GetRequiredService<ElasticsearchClient>();
-                var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreOptions>();
+                options ??= sp.GetService<ElasticsearchVectorStoreOptions>() ?? new()
+                {
+                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
+                };
 
-                return new ElasticsearchVectorStore(
-                    elasticsearchClient,
-                    selectedOptions);
+                return new ElasticsearchVectorStore(elasticsearchClient, options);
             });
 
         return services;
@@ -50,25 +55,30 @@ public static class ElasticsearchServiceCollectionExtensions
     /// <param name="options">Optional options to further configure the <see cref="IVectorStore"/>.</param>
     /// <param name="serviceId">An optional service id to use as the service key.</param>
     /// <returns>The service collection.</returns>
-    public static IServiceCollection AddElasticsearchVectorStore(this IServiceCollection services, IElasticsearchClientSettings clientSettings, ElasticsearchVectorStoreOptions? options = default, string? serviceId = default)
+    public static IServiceCollection AddElasticsearchVectorStore(
+        this IServiceCollection services,
+        IElasticsearchClientSettings clientSettings,
+        ElasticsearchVectorStoreOptions? options = default,
+        string? serviceId = default)
     {
         services.AddKeyedSingleton<IVectorStore>(
             serviceId,
             (sp, _) =>
             {
                 var elasticsearchClient = new ElasticsearchClient(clientSettings);
-                var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreOptions>();
+                options ??= sp.GetService<ElasticsearchVectorStoreOptions>() ?? new()
+                {
+                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
+                };
 
-                return new ElasticsearchVectorStore(
-                    elasticsearchClient,
-                    selectedOptions);
+                return new ElasticsearchVectorStore(elasticsearchClient, options);
             });
 
         return services;
     }
 
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorizedSearch{TRecord}"/> with the specified service ID
+    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorSearch{TRecord}"/> with the specified service ID
     /// and where the <see cref="ElasticsearchClient"/> is retrieved from the dependency injection container.
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
@@ -84,15 +94,19 @@ public static class ElasticsearchServiceCollectionExtensions
         ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
         string? serviceId = default)
         where TKey : notnull
+        where TRecord : notnull
     {
         services.AddKeyedTransient<IVectorStoreRecordCollection<TKey, TRecord>>(
             serviceId,
             (sp, _) =>
             {
                 var elasticsearchClient = sp.GetRequiredService<ElasticsearchClient>();
-                var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>();
+                options ??= sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>() ?? new()
+                {
+                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
+                };
 
-                return (new ElasticsearchVectorStoreRecordCollection<TRecord>(elasticsearchClient, collectionName, selectedOptions) as IVectorStoreRecordCollection<TKey, TRecord>)!;
+                return (new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options) as IVectorStoreRecordCollection<TKey, TRecord>)!;
             });
 
         AddVectorizedSearch<TKey, TRecord>(services, serviceId);
@@ -101,7 +115,7 @@ public static class ElasticsearchServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorizedSearch{TRecord}"/> with the specified service ID
+    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorSearch{TRecord}"/> with the specified service ID
     /// and where the <see cref="ElasticsearchClient"/> is constructed using the provided client settings.
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
@@ -119,15 +133,19 @@ public static class ElasticsearchServiceCollectionExtensions
         ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
         string? serviceId = default)
         where TKey : notnull
+        where TRecord : notnull
     {
         services.AddKeyedSingleton<IVectorStoreRecordCollection<TKey, TRecord>>(
             serviceId,
             (sp, _) =>
             {
                 var elasticsearchClient = new ElasticsearchClient(clientSettings);
-                var selectedOptions = options ?? sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>();
+                options ??= sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>() ?? new()
+                {
+                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
+                };
 
-                return (new ElasticsearchVectorStoreRecordCollection<TRecord>(elasticsearchClient, collectionName, selectedOptions) as IVectorStoreRecordCollection<TKey, TRecord>)!;
+                return (new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options) as IVectorStoreRecordCollection<TKey, TRecord>)!;
             });
 
         AddVectorizedSearch<TKey, TRecord>(services, serviceId);
@@ -136,7 +154,7 @@ public static class ElasticsearchServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Also register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> with the given <paramref name="serviceId"/> as a <see cref="IVectorizedSearch{TRecord}"/>.
+    /// Also register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> with the given <paramref name="serviceId"/> as a <see cref="IVectorSearch{TRecord}"/>.
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <typeparam name="TRecord">The type of the data model that the collection should contain.</typeparam>
@@ -144,8 +162,9 @@ public static class ElasticsearchServiceCollectionExtensions
     /// <param name="serviceId">The service id that the registrations should use.</param>
     private static void AddVectorizedSearch<TKey, TRecord>(IServiceCollection services, string? serviceId)
         where TKey : notnull
+        where TRecord : notnull
     {
-        services.AddKeyedTransient<IVectorizedSearch<TRecord>>(
+        services.AddKeyedTransient<IVectorSearch<TRecord>>(
             serviceId,
             (sp, _) =>
             {

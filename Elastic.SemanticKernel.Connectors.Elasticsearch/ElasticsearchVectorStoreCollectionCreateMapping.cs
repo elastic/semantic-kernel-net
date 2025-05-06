@@ -3,12 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 
 using Elastic.Clients.Elasticsearch.Mapping;
 
 using Microsoft.Extensions.VectorData;
-using Microsoft.SemanticKernel.Data;
+using Microsoft.Extensions.VectorData.ConnectorSupport;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
@@ -20,41 +19,36 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
     /// <summary>
     /// TBC
     /// </summary>
-    /// <param name="propertyReader"></param>
-    /// <param name="propertyToStorageName"></param>
+    /// <param name="model"></param>
     /// <returns></returns>
     public static Properties BuildPropertyMappings(
-        VectorStoreRecordPropertyReader propertyReader,
-        Dictionary<VectorStoreRecordProperty, string> propertyToStorageName)
+        VectorStoreRecordModel model)
     {
         var propertyMappings = new Properties();
 
-        var vectorProperties = propertyReader.VectorProperties;
+        var vectorProperties = model.VectorProperties;
         foreach (var property in vectorProperties)
         {
-            propertyMappings.Add(propertyToStorageName[property],
+            propertyMappings.Add(property.StorageName,
                 new DenseVectorProperty
                 {
                     Dims = property.Dimensions,
                     Index = true,
                     Similarity = GetSimilarityFunction(property),
-                    IndexOptions = new DenseVectorIndexOptions
-                    {
-                        Type = GetIndexKind(property)
-                    }
+                    IndexOptions = new DenseVectorIndexOptions(GetIndexKind(property))
                 });
         }
 
-        var dataProperties = propertyReader.DataProperties;
+        var dataProperties = model.DataProperties;
         foreach (var property in dataProperties)
         {
-            if (property.IsFullTextSearchable)
+            if (property.IsFullTextIndexed)
             {
-                propertyMappings.Add(propertyToStorageName[property], new TextProperty());
+                propertyMappings.Add(property.StorageName, new TextProperty());
             }
-            else if (property.IsFilterable)
+            else if (property.IsIndexed)
             {
-                propertyMappings.Add(propertyToStorageName[property], new KeywordProperty());
+                propertyMappings.Add(property.StorageName, new KeywordProperty());
             }
         }
 
@@ -62,18 +56,20 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
     }
 
     /// <summary>
-    ///     Get the configured Elasticsearch index kind from the given <paramref name="vectorProperty" />.
-    ///     If none is configured, the default is <c>int8_hnsw</c>.
+    /// Get the configured Elasticsearch index kind from the given <paramref name="vectorProperty" />.
+    /// If none is configured, the default is <c>int8_hnsw</c>.
     /// </summary>
     /// <param name="vectorProperty">The vector property definition.</param>
     /// <returns>The chosen Elasticsearch index kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown if an index kind is chosen that isn't supported by Elasticsearch.</exception>
-    private static DenseVectorIndexOptionsType GetIndexKind(VectorStoreRecordVectorProperty vectorProperty)
+    private static DenseVectorIndexOptionsType GetIndexKind(VectorStoreRecordVectorPropertyModel vectorProperty)
     {
         const string int8HnswIndexKind = "int8_hnsw";
         const string int4HnswIndexKind = "int4_hnsw";
+        const string bbqHnswIndexKind  = "bbq_hnsw";
         const string int8FlatIndexKind = "int8_flat";
         const string int4FlatIndexKind = "int4_flat";
+        const string bbqFlatIndexKind  = "bbq_flat";
 
         if (vectorProperty.DistanceFunction is null)
         {
@@ -85,25 +81,25 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
             IndexKind.Hnsw => DenseVectorIndexOptionsType.Hnsw,
             int8HnswIndexKind => DenseVectorIndexOptionsType.Int8Hnsw,
             int4HnswIndexKind => DenseVectorIndexOptionsType.Int4Hnsw,
+            bbqHnswIndexKind => DenseVectorIndexOptionsType.BbqHnsw,
             IndexKind.Flat => DenseVectorIndexOptionsType.Flat,
             int8FlatIndexKind => DenseVectorIndexOptionsType.Int8Flat,
             int4FlatIndexKind => DenseVectorIndexOptionsType.Int4Flat,
-            _ => throw new InvalidOperationException(
-                $"Index kind '{vectorProperty.IndexKind}' for {nameof(VectorStoreRecordVectorProperty)} '{vectorProperty.DataModelPropertyName}' is not supported by the Elasticsearch VectorStore.")
+            bbqFlatIndexKind => DenseVectorIndexOptionsType.BbqFlat,
+            _ => throw new InvalidOperationException($"Index kind '{vectorProperty.IndexKind}' for '{vectorProperty.ModelName}' is not supported by the Elasticsearch VectorStore.")
         };
     }
 
     /// <summary>
-    ///     Get the configured Elasticsearch distance function from the given <paramref name="vectorProperty" />.
-    ///     If none is configured, the default is <c>cosine</c>.
+    /// Get the configured Elasticsearch distance function from the given <paramref name="vectorProperty" />.
+    /// If none is configured, the default is <c>cosine</c>.
     /// </summary>
     /// <param name="vectorProperty">The vector property definition.</param>
     /// <returns>The chosen Elasticsearch distance function.</returns>
     /// <exception cref="InvalidOperationException">
-    ///     Thrown if a distance function is chosen that isn't supported by
-    ///     Elasticsearch.
+    /// Thrown if a distance function is chosen that isn't supported by Elasticsearch.
     /// </exception>
-    private static DenseVectorSimilarity GetSimilarityFunction(VectorStoreRecordVectorProperty vectorProperty)
+    private static DenseVectorSimilarity GetSimilarityFunction(VectorStoreRecordVectorPropertyModel vectorProperty)
     {
         const string maxInnerProductSimilarity = "max_inner_product";
 
@@ -118,8 +114,7 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
             DistanceFunction.DotProductSimilarity => DenseVectorSimilarity.DotProduct,
             DistanceFunction.EuclideanDistance => DenseVectorSimilarity.L2Norm,
             maxInnerProductSimilarity => DenseVectorSimilarity.MaxInnerProduct,
-            _ => throw new InvalidOperationException(
-                $"Distance function '{vectorProperty.DistanceFunction}' for {nameof(VectorStoreRecordVectorProperty)} '{vectorProperty.DataModelPropertyName}' is not supported by the Elasticsearch VectorStore.")
+            _ => throw new InvalidOperationException($"Distance function '{vectorProperty.DistanceFunction}' for '{vectorProperty.ModelName}' is not supported by the Elasticsearch VectorStore.")
         };
     }
 }

@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace Microsoft.SemanticKernel;
 
+#pragma warning disable IDE0007
 #pragma warning disable IDE1006
+#pragma warning disable SYSLIB1045
 
 [ExcludeFromCodeCoverage]
 internal static partial class Verify
@@ -79,6 +82,8 @@ internal static partial class Verify
         }
     }
 
+#if !SKIPSKABSTRACTION
+
     internal static void ValidPluginName([NotNull] string? pluginName, IReadOnlyKernelPluginCollection? plugins = null, [CallerArgumentExpression(nameof(pluginName))] string? paramName = null)
     {
         NotNullOrWhiteSpace(pluginName);
@@ -92,6 +97,8 @@ internal static partial class Verify
             throw new ArgumentException($"A plugin with the name '{pluginName}' already exists.");
         }
     }
+
+#endif
 
     internal static void ValidFunctionName([NotNull] string? functionName, [CallerArgumentExpression(nameof(functionName))] string? paramName = null)
     {
@@ -150,8 +157,46 @@ internal static partial class Verify
         }
     }
 
+#if !SKIPSKABSTRACTION
+
+    /// <summary>
+    /// Make sure every function parameter name is unique
+    /// </summary>
+    /// <param name="parameters">List of parameters</param>
+    internal static void ParametersUniqueness(IReadOnlyList<KernelParameterMetadata> parameters)
+    {
+        int count = parameters.Count;
+        if (count > 0)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < count; i++)
+            {
+                KernelParameterMetadata p = parameters[i];
+                if (string.IsNullOrWhiteSpace(p.Name))
+                {
+                    string paramName = $"{nameof(parameters)}[{i}].{p.Name}";
+                    if (p.Name is null)
+                    {
+                        ThrowArgumentNullException(paramName);
+                    }
+                    else
+                    {
+                        ThrowArgumentWhiteSpaceException(paramName);
+                    }
+                }
+
+                if (!seen.Add(p.Name))
+                {
+                    throw new ArgumentException($"The function has two or more parameters with the same name '{p.Name}'");
+                }
+            }
+        }
+    }
+
+#endif
+
     [DoesNotReturn]
-    private static void ThrowArgumentInvalidName(string kind, string name, string? paramName) =>
+    internal static void ThrowArgumentInvalidName(string kind, string name, string? paramName) =>
         throw new ArgumentException($"A {kind} can contain only ASCII letters, digits, and underscores: '{name}' is not a valid name.", paramName);
 
     [DoesNotReturn]
@@ -165,6 +210,59 @@ internal static partial class Verify
     [DoesNotReturn]
     internal static void ThrowArgumentOutOfRangeException<T>(string? paramName, T actualValue, string message) =>
         throw new ArgumentOutOfRangeException(paramName, actualValue, message);
+
+    private static readonly HashSet<string> s_invalidLocationCharacters = [
+        "://",
+        "..",
+        "\\",
+        "/",
+        "@",
+        "?",
+        "#",
+        "[",
+        "]",
+        "&",
+        ":",
+        "<",
+        ">",
+        "'",
+        "\"",
+        "+",
+        "|",
+        "="
+    ];
+
+    /// <summary>
+    /// Validates that a hostname segment string is safe for use as a URL segment, preventing URL injection.
+    /// </summary>
+    /// <param name="hostNameSegment">The hostname segment string to validate (e.g., 'us-east1', 'europe-west4')</param>
+    /// <param name="paramName">Optional parameter name for the exception</param>
+    /// <exception cref="ArgumentException">Thrown when the location contains invalid characters or patterns</exception>
+    internal static void ValidHostnameSegment(string hostNameSegment, [CallerArgumentExpression(nameof(hostNameSegment))] string? paramName = null)
+    {
+        // Check for URL injection patterns and invalid characters
+        if (s_invalidLocationCharacters.Any(hostNameSegment.Contains))
+        {
+            throw new ArgumentException($"The location '{hostNameSegment}' contains invalid characters that could enable URL injection.", paramName);
+        }
+
+        // Validate location format (allows alphanumeric, hyphens, and underscores)
+        // Common format examples: us-east1, europe-west4, asia-northeast1
+        if (!System.Text.RegularExpressions.Regex.IsMatch(hostNameSegment, @"^[a-zA-Z0-9][a-zA-Z0-9\-_]*[a-zA-Z0-9]$"))
+        {
+            throw new ArgumentException($"The location '{hostNameSegment}' is not valid. Location must start and end with alphanumeric characters and can contain hyphens and underscores.", paramName);
+        }
+    }
+
+    internal static void NotLessThan(int value, int limit, [CallerArgumentExpression(nameof(value))] string? paramName = null)
+    {
+        if (value < limit)
+        {
+            throw new ArgumentOutOfRangeException(paramName, $"{paramName} must be greater than or equal to {limit}.");
+        }
+    }
 }
 
+#pragma warning restore IDE0007
 #pragma warning restore IDE1006
+#pragma warning restore SYSLIB1045

@@ -2,6 +2,8 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
+using System;
+
 using Elastic.Clients.Elasticsearch;
 
 using Elastic.SemanticKernel.Connectors.Elasticsearch;
@@ -15,6 +17,7 @@ namespace Microsoft.SemanticKernel;
 /// <summary>
 /// Extension methods to register Elasticsearch <see cref="IVectorStore"/> instances on the <see cref="IKernelBuilder"/>.
 /// </summary>
+[Obsolete("The IKernelBuilder extensions are being obsoleted, call the appropriate function on the Services property of your IKernelBuilder")]
 public static class ElasticsearchKernelBuilderExtensions
 {
     /// <summary>
@@ -45,7 +48,7 @@ public static class ElasticsearchKernelBuilderExtensions
     }
 
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorizedSearch{TRecord}"/> with the specified service ID
+    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorSearch{TRecord}"/> with the specified service ID
     /// and where the <see cref="ElasticsearchClient"/> is retrieved from the dependency injection container.
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
@@ -61,13 +64,14 @@ public static class ElasticsearchKernelBuilderExtensions
         ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
         string? serviceId = default)
         where TKey : notnull
+        where TRecord : notnull
     {
         builder.Services.AddElasticsearchVectorStoreRecordCollection<TKey, TRecord>(collectionName, options, serviceId);
         return builder;
     }
 
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorizedSearch{TRecord}"/> with the specified service ID
+    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorSearch{TRecord}"/> with the specified service ID
     /// and where the <see cref="ElasticsearchClient"/> is constructed using the provided client settings.
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
@@ -85,6 +89,7 @@ public static class ElasticsearchKernelBuilderExtensions
         ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
         string? serviceId = default)
         where TKey : notnull
+        where TRecord : notnull
     {
         builder.Services.AddElasticsearchVectorStoreRecordCollection<TKey, TRecord>(collectionName, clientSettings, options, serviceId);
         return builder;

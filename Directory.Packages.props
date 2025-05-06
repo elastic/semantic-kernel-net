@@ -5,15 +5,17 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.16.2" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Abstractions" Version="1.30.0" />
+    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.4.3-preview.1.25230.7" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Abstractions" Version="1.48.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
-    <PackageVersion Include="System.Text.Json" Version="8.0.5" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.4" />
     <!-- Playground -->
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.30.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.30.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.48.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.48.0" />
   </ItemGroup>
   <ItemGroup>
     <GlobalPackageReference Include="Microsoft.Build.CopyOnWrite" Version="1.0.334" />
