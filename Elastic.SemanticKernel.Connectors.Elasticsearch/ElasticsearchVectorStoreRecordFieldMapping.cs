@@ -18,7 +18,7 @@ internal static class ElasticsearchVectorStoreRecordFieldMapping
             RequiresAtLeastOneVector = false,
             SupportsMultipleKeys = false,
             SupportsMultipleVectors = true,
-            SupportedKeyPropertyTypes = [typeof(string)],
+            SupportedKeyPropertyTypes = [typeof(string), typeof(int), typeof(long), typeof(Guid)],
             SupportedDataPropertyTypes = null,
             SupportedEnumerableDataPropertyElementTypes = null,
             SupportedVectorPropertyTypes = SupportedVectorTypes,
@@ -36,6 +36,11 @@ internal static class ElasticsearchVectorStoreRecordFieldMapping
 
     public static TKey ElasticsearchIdToKey<TKey>(string id)
     {
+        if (typeof(TKey) == typeof(object))
+        {
+            return (TKey)(object)id;
+        }
+
         if (typeof(TKey) == typeof(string))
         {
             return (TKey)(object)id;

@@ -77,11 +77,6 @@ public class ElasticsearchVectorStore :
         where TKey : notnull
         where TRecord : notnull
     {
-        if (typeof(TKey) != typeof(string))
-        {
-            throw new NotSupportedException("Only string keys are supported.");
-        }
-
 #pragma warning disable CS0618 // IElasticsearchVectorStoreRecordCollectionFactory is obsolete
         if (_options.VectorStoreCollectionFactory is not null)
         {
