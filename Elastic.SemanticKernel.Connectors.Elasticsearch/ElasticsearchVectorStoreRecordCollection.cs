@@ -613,9 +613,9 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
 
         return vector switch
         {
+            ReadOnlyMemory<float> v => v.ToArray(),
             ICollection<float> v => v,
             IEnumerable<float> v => [.. v],
-            ReadOnlyMemory<float> v => v.ToArray(),
             _ => throw new NotSupportedException($"The provided vector type {vector.GetType().FullName} is not supported by the Elasticsearch connector.")
         };
     }

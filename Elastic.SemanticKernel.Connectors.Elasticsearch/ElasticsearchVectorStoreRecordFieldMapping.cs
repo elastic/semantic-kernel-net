@@ -18,7 +18,7 @@ internal static class ElasticsearchVectorStoreRecordFieldMapping
             RequiresAtLeastOneVector = false,
             SupportsMultipleKeys = false,
             SupportsMultipleVectors = true,
-            SupportedKeyPropertyTypes = [typeof(string), typeof(int), typeof(long), typeof(Guid)],
+            SupportedKeyPropertyTypes = [typeof(string), typeof(long), typeof(Guid)],
             SupportedDataPropertyTypes = null,
             SupportedEnumerableDataPropertyElementTypes = null,
             SupportedVectorPropertyTypes = SupportedVectorTypes,
@@ -29,9 +29,14 @@ internal static class ElasticsearchVectorStoreRecordFieldMapping
     /// <summary>A set of types that vectors on the provided model may have.</summary>
     public static readonly HashSet<Type> SupportedVectorTypes =
     [
-        typeof(ICollection<float>),
+        typeof(ReadOnlyMemory<float>),
+        typeof(ReadOnlyMemory<float>?),
         typeof(IEnumerable<float>),
-        typeof(ReadOnlyMemory<float>)
+        typeof(IReadOnlyCollection<float>),
+        typeof(ICollection<float>),
+        typeof(IReadOnlyList<float>),
+        typeof(IList<float>),
+        typeof(float[])
     ];
 
     public static TKey ElasticsearchIdToKey<TKey>(string id)
@@ -44,11 +49,6 @@ internal static class ElasticsearchVectorStoreRecordFieldMapping
         if (typeof(TKey) == typeof(string))
         {
             return (TKey)(object)id;
-        }
-
-        if (typeof(TKey) == typeof(int))
-        {
-            return (TKey)(object)int.Parse(id, CultureInfo.InvariantCulture);
         }
 
         if (typeof(TKey) == typeof(long))
@@ -69,7 +69,6 @@ internal static class ElasticsearchVectorStoreRecordFieldMapping
         return key switch
         {
             string => (string)(object)key,
-            int => key.ToString(),
             long => key.ToString(),
             Guid => key.ToString(),
             _ => throw new NotSupportedException($"The provided key type '{key.GetType().Name}' is not supported by Elasticsearch.")
