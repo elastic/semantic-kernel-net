@@ -4,9 +4,9 @@
     ".NETStandard,Version=v2.0": {
       "Elastic.Clients.Elasticsearch": {
         "type": "Direct",
-        "requested": "[9.0.1, )",
-        "resolved": "9.0.1",
-        "contentHash": "fxziZLDGh+yHFTlPI7cQdBPSep5PAP3z2/Y7OC0Pn0MNHu811Dsduyaop2ERyuwyGniJCn4buJ7lHKeM9b8GFQ==",
+        "requested": "[9.0.3, )",
+        "resolved": "9.0.3",
+        "contentHash": "24pSpgB5GieReeagUtEsIEKRtTKLth+rjZhWKnWC0NqgCG+RDhJiWUG7iWIiTrk/yGJPnB8cEjuNPkPg8N5f9g==",
         "dependencies": {
           "Elastic.Transport": "0.5.9"
         }
@@ -66,6 +66,12 @@
         "dependencies": {
           "Microsoft.NETCore.Platforms": "1.1.0"
         }
+      },
+      "PolySharp": {
+        "type": "Direct",
+        "requested": "[1.15.0, )",
+        "resolved": "1.15.0",
+        "contentHash": "FbU0El+EEjdpuIX4iDbeS7ki1uzpJPx8vbqOzEtqnl1GZeAGJfq+jCbxeJL2y0EPnUNk8dRnnqR2xnYXg9Tf+g=="
       },
       "System.Text.Json": {
         "type": "Direct",
@@ -201,9 +207,9 @@
     "net8.0": {
       "Elastic.Clients.Elasticsearch": {
         "type": "Direct",
-        "requested": "[9.0.1, )",
-        "resolved": "9.0.1",
-        "contentHash": "fxziZLDGh+yHFTlPI7cQdBPSep5PAP3z2/Y7OC0Pn0MNHu811Dsduyaop2ERyuwyGniJCn4buJ7lHKeM9b8GFQ==",
+        "requested": "[9.0.3, )",
+        "resolved": "9.0.3",
+        "contentHash": "24pSpgB5GieReeagUtEsIEKRtTKLth+rjZhWKnWC0NqgCG+RDhJiWUG7iWIiTrk/yGJPnB8cEjuNPkPg8N5f9g==",
         "dependencies": {
           "Elastic.Transport": "0.5.9"
         }
@@ -247,6 +253,12 @@
         "requested": "[6.0.0, )",
         "resolved": "6.0.0",
         "contentHash": "+/SsmiySsXJlvQLCGBqaZKNVt3s/Y/HbAdwtop7Km2CnuZbaScoqkWJEBQ5Cy9ebkn6kCYKrHsXgwrFdTgcb3g=="
+      },
+      "PolySharp": {
+        "type": "Direct",
+        "requested": "[1.15.0, )",
+        "resolved": "1.15.0",
+        "contentHash": "FbU0El+EEjdpuIX4iDbeS7ki1uzpJPx8vbqOzEtqnl1GZeAGJfq+jCbxeJL2y0EPnUNk8dRnnqR2xnYXg9Tf+g=="
       },
       "System.Text.Json": {
         "type": "Direct",

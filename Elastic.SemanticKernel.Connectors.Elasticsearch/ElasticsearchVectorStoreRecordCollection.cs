@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.Cluster;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
 
@@ -27,7 +26,7 @@ using Microsoft.SemanticKernel.Data;
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
 /// <summary>
-///     Service for storing and retrieving vector records, that uses Elasticsearch as the underlying storage.
+/// Service for storing and retrieving vector records, that uses Elasticsearch as the underlying storage.
 /// </summary>
 /// <typeparam name="TRecord">The data model to use for adding, updating and retrieving data from storage.</typeparam>
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
@@ -95,6 +94,11 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
         // Verify.
         Verify.NotNull(elasticsearchClient);
         Verify.NotNullOrWhiteSpace(name);
+
+        if (typeof(TKey) != typeof(string) && typeof(TKey) != typeof(ulong) && typeof(TKey) != typeof(Guid) && typeof(TKey) != typeof(object))
+        {
+            throw new NotSupportedException("Only 'string', 'ulong' and 'Guid' keys are supported (and 'object' for dynamic mapping).");
+        }
 
         // Assign.
         _collectionMetadata = new()
@@ -208,7 +212,6 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // TODO: Use mget endpoint
-        // TODO: Handle options
 
         Verify.NotNull(keys);
 
@@ -225,11 +228,59 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
     }
 
     /// <inheritdoc />
-    public IAsyncEnumerable<TRecord> GetAsync(Expression<Func<TRecord, bool>> filter, int top, GetFilteredRecordOptions<TRecord>? options = null,
-        CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<TRecord> GetAsync(Expression<Func<TRecord, bool>> filter, int top, GetFilteredRecordOptions<TRecord>? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // TODO:
-        throw new NotImplementedException();
+        Verify.NotNull(filter);
+        Verify.NotLessThan(top, 1);
+
+        options ??= new();
+
+        var translatedFilter = new ElasticsearchFilterTranslator().Translate(filter, _model);
+
+        List<SortOptions>? sort = null;
+        if (options.OrderBy?.Values?.Count is > 0)
+        {
+            sort = options.OrderBy.Values
+                .Select(sortInfo => new SortOptions
+                {
+                    Field = new FieldSort(_model.GetDataOrKeyProperty(sortInfo.PropertySelector).StorageName)
+                    {
+                        Order = sortInfo.Ascending ? SortOrder.Asc : SortOrder.Desc
+                    }
+                })
+                .ToList();
+        }
+
+        // Build search query.
+
+        var query = translatedFilter ?? new Query { MatchAll = new() };
+
+        // Execute search query.
+
+        var hits = await RunOperationAsync(
+                "search",
+                () => _elasticsearchClient.SearchAsync(
+                    _collectionName,
+                    query,
+                    sort,
+                    options.IncludeVectors ? null : _vectorFields,
+                    options.Skip,
+                    top,
+                    cancellationToken: cancellationToken))
+            .ConfigureAwait(false);
+
+        // Map results.
+
+        var mappingOptions = new StorageToDataModelMapperOptions { IncludeVectors = options.IncludeVectors };
+        var mappedResults = hits.Select(x =>
+            _mapper.MapFromStorageToDataModel((x.Id, x.Source!), mappingOptions)
+        );
+
+        foreach (var result in mappedResults)
+        {
+            yield return result;
+        }
     }
 
     /// <inheritdoc />
@@ -263,14 +314,40 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
     {
         Verify.NotNull(record);
 
-        // TODO: Embedding generation.
+        // If an embedding generator is defined, invoke it once per property.
+        Embedding<float>?[]? generatedEmbeddings = null;
+
+        var vectorPropertyCount = _model.VectorProperties.Count;
+        for (var i = 0; i < vectorPropertyCount; i++)
+        {
+            var vectorProperty = _model.VectorProperties[i];
+
+            if (vectorProperty.EmbeddingGenerator is null)
+            {
+                continue;
+            }
+
+            // TODO: Ideally we'd group together vector properties using the same generator (and with the same input and output properties),
+            //       and generate embeddings for them in a single batch. That's some more complexity though.
+
+            if (vectorProperty.TryGenerateEmbedding<TRecord, Embedding<float>, ReadOnlyMemory<float>>(record, cancellationToken, out var task))
+            {
+                generatedEmbeddings ??= new Embedding<float>?[vectorPropertyCount];
+                generatedEmbeddings[i] = await task.ConfigureAwait(false);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"The embedding generator configured on property '{vectorProperty.ModelName}' cannot produce an embedding of type '{typeof(Embedding<float>).Name}' for the given input type.");
+            }
+        }
 
         var storageModel = VectorStoreErrorHandler.RunModelConversion(
             ElasticsearchConstants.VectorStoreSystemName,
             _collectionMetadata.VectorStoreName,
             _collectionName,
             "index",
-            () => _mapper.MapFromDataToStorageModel(record));
+            () => _mapper.MapFromDataToStorageModel(record, generatedEmbeddings));
 
         var id = await RunOperationAsync(
                 "index",
@@ -284,7 +361,6 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
     public async Task<IReadOnlyList<TKey>> UpsertAsync(IEnumerable<TRecord> records, CancellationToken cancellationToken = default)
     {
         // TODO: Use _bulk endpoint
-        // TODO: Embedding generation.
 
         Verify.NotNull(records);
 
@@ -320,7 +396,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
             case IEmbeddingGenerator<TInput, Embedding<float>> generator:
                 var embedding = await generator.GenerateAsync(value, new() { Dimensions = vectorProperty.Dimensions }, cancellationToken).ConfigureAwait(false);
 
-                await foreach (var record in SearchCoreAsync(embedding.Vector, top, vectorProperty, operationName: "Search", options, cancellationToken).ConfigureAwait(false))
+                await foreach (var record in SearchCoreAsync(embedding.Vector, top, vectorProperty, options, cancellationToken).ConfigureAwait(false))
                 {
                     yield return record;
                 }
@@ -351,14 +427,13 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
         options ??= DefaultVectorSearchOptions;
         var vectorProperty = _model.GetVectorPropertyOrSingle(options);
 
-        return SearchCoreAsync(vector, top, vectorProperty, operationName: "SearchEmbedding", options, cancellationToken);
+        return SearchCoreAsync(vector, top, vectorProperty, options, cancellationToken);
     }
 
     private async IAsyncEnumerable<VectorSearchResult<TRecord>> SearchCoreAsync<TVector>(
         TVector vector,
         int top,
         VectorStoreRecordVectorPropertyModel vectorProperty,
-        string operationName,
         VectorSearchOptions<TRecord> options,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
         where TVector : notnull
@@ -378,8 +453,8 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
         {
             { OldFilter: not null, Filter: not null } => throw new ArgumentException($"Either '{nameof(options.Filter)}' or '{nameof(options.OldFilter)}' can be specified, but not both."),
             { OldFilter: {} legacyFilter } => ElasticsearchVectorStoreCollectionSearchMapping.BuildFromLegacyFilter(legacyFilter, _model),
-            { Filter: {} newFilter } => ElasticsearchFilterTranslator.Translate(newFilter, _model),
-            _ => []
+            { Filter: {} newFilter } => new ElasticsearchFilterTranslator().Translate(newFilter, _model),
+            _ => null
         };
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -387,21 +462,18 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
 
         var knnQuery = new KnnQuery(field: vectorProperty.StorageName)
         {
-            QueryVector = floatVector.ToArray()
+            QueryVector = floatVector.ToArray(),
+            Filter = filter is null ? null : [filter]
         };
-
-        if (filter.Count is not 0)
-        {
-            knnQuery.Filter = filter;
-        }
 
         // Execute search query.
 
         var hits = await RunOperationAsync(
-                operationName,
+                "search",
                 () => _elasticsearchClient.SearchAsync(
                     _collectionName,
                     new Query { Knn = knnQuery },
+                    null,
                     options.IncludeVectors ? null : _vectorFields,
                     options.Skip,
                     top,
@@ -410,14 +482,15 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
 
         // Map results.
 
+        var mappingOptions = new StorageToDataModelMapperOptions { IncludeVectors = options.IncludeVectors };
         var mappedResults = hits.Select(x =>
             new VectorSearchResult<TRecord>(
                 VectorStoreErrorHandler.RunModelConversion(
                     ElasticsearchConstants.VectorStoreSystemName,
                     _collectionMetadata.VectorStoreName,
                     _collectionName,
-                    operationName,
-                    () => _mapper.MapFromStorageToDataModel((x.Id, x.Source!), new StorageToDataModelMapperOptions { IncludeVectors = options.IncludeVectors })),
+                    "search",
+                    () => _mapper.MapFromStorageToDataModel((x.Id, x.Source!), mappingOptions)),
                 x.Score
             )
         );
@@ -470,8 +543,8 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
         {
             { OldFilter: not null, Filter: not null } => throw new ArgumentException($"Either '{nameof(options.Filter)}' or '{nameof(options.OldFilter)}' can be specified, but not both."),
             { OldFilter: {} legacyFilter } => ElasticsearchVectorStoreCollectionSearchMapping.BuildFromLegacyFilter(legacyFilter, _model),
-            { Filter: {} newFilter } => ElasticsearchFilterTranslator.Translate(newFilter, _model),
-            _ => []
+            { Filter: {} newFilter } => new ElasticsearchFilterTranslator().Translate(newFilter, _model),
+            _ => null
         };
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -481,7 +554,8 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
         {
             K = top,
             NumCandidates = Math.Max((int)Math.Ceiling(1.5f * top), 100),
-            QueryVector = floatVector
+            QueryVector = floatVector,
+            Filter = filter is null ? null : [filter]
         };
 
         var query = new Query
@@ -489,16 +563,9 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
             Terms = new TermsQuery(field: textDataProperty.StorageName, terms: keywords.Select(FieldValue.String).ToArray())
         };
 
-        if (filter.Count is not 0)
+        if (filter is not null)
         {
-            knn.Filter = filter;
-            query = new Query
-            {
-                Bool = new BoolQuery
-                {
-                    Must = [query, .. filter]
-                }
-            };
+            query = filter && query;
         }
 
         var rank = new Rank
@@ -526,6 +593,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
 
         // Map results.
 
+        var mapperOptions = new StorageToDataModelMapperOptions { IncludeVectors = options.IncludeVectors };
         var mappedResults = hits.Select(x =>
             new VectorSearchResult<TRecord>(
                 VectorStoreErrorHandler.RunModelConversion(
@@ -533,7 +601,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
                     _collectionMetadata.VectorStoreName,
                     _collectionName,
                     "search",
-                    () => _mapper.MapFromStorageToDataModel((x.Id, x.Source!), new StorageToDataModelMapperOptions { IncludeVectors = options.IncludeVectors })),
+                    () => _mapper.MapFromStorageToDataModel((x.Id, x.Source!), mapperOptions)),
                 x.Score
             )
         );

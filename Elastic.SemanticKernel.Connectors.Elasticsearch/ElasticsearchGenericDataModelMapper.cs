@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport.Extensions;
 
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 using Microsoft.Extensions.VectorData.ConnectorSupport;
 using Microsoft.SemanticKernel;
@@ -50,7 +51,7 @@ internal sealed class ElasticsearchGenericDataModelMapper :
     }
 
     /// <inheritdoc />
-    public (string? id, JsonObject document) MapFromDataToStorageModel(Dictionary<string, object?> dataModel)
+    public (string? id, JsonObject document) MapFromDataToStorageModel(Dictionary<string, object?> dataModel, Embedding<float>?[]? generatedEmbeddings)
     {
         Verify.NotNull(dataModel);
 
@@ -58,6 +59,7 @@ internal sealed class ElasticsearchGenericDataModelMapper :
         var keyValue = (string?)keyProperty.GetValueAsObject(dataModel);
 
         var document = new JsonObject();
+        var vectorPropertyIndex = 0;
 
         foreach (var property in _model.Properties)
         {
@@ -65,6 +67,18 @@ internal sealed class ElasticsearchGenericDataModelMapper :
             {
                 // The key is not part of the document payload.
                 continue;
+            }
+
+            if ((generatedEmbeddings is not null) && (property is VectorStoreRecordVectorPropertyModel))
+            {
+                // Use generated embedding for this vector property.
+
+                var embedding = generatedEmbeddings[vectorPropertyIndex++];
+                if (embedding is not null)
+                {
+                    document.Add(property.StorageName, JsonValue.Create(embedding.Vector));
+                    continue;
+                }
             }
 
             var value = property.GetValueAsObject(dataModel);

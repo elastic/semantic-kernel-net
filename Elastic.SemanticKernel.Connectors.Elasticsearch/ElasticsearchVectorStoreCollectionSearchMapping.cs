@@ -29,13 +29,13 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
     /// <param name="model">A model representing a record in a vector store collection.</param>
     /// <returns>The Elasticsearch filter queries.</returns>
     /// <exception cref="NotSupportedException">Thrown when the provided filter contains unsupported types, values or unknown properties.</exception>
-    public static ICollection<Query> BuildFromLegacyFilter(VectorSearchFilter? basicVectorSearchFilter, VectorStoreRecordModel model)
+    public static Query? BuildFromLegacyFilter(VectorSearchFilter? basicVectorSearchFilter, VectorStoreRecordModel model)
     {
         Verify.NotNull(model);
 
         if (basicVectorSearchFilter is null)
         {
-            return [];
+            return null;
         }
 
         var filterClauses = basicVectorSearchFilter.FilterClauses.ToArray();
@@ -67,7 +67,7 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
             }
         }
 
-        return filterQueries;
+        return new Query { Bool = new() { Must = filterQueries } };
 
         VectorStoreRecordDataPropertyModel GetPropertyNameMapping(string fieldName)
         {

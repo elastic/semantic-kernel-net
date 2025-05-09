@@ -1,3 +1,4 @@
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
@@ -13,8 +14,9 @@ internal interface IElasticsearchVectorStoreRecordMapper<TRecordDataModel, TStor
     /// Maps from the consumer record data model to the storage model.
     /// </summary>
     /// <param name="dataModel">The consumer record data model record to map.</param>
+    /// <param name="generatedEmbeddings">A list that contains generated embeddings for each vector property.</param>
     /// <returns>The mapped result.</returns>
-    public TStorageModel MapFromDataToStorageModel(TRecordDataModel dataModel);
+    public TStorageModel MapFromDataToStorageModel(TRecordDataModel dataModel, Embedding<float>?[]? generatedEmbeddings);
 
     /// <summary>
     /// Maps from the storage model to the consumer record data model.

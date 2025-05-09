@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport.Extensions;
 
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 using Microsoft.Extensions.VectorData.ConnectorSupport;
 using Microsoft.SemanticKernel;
@@ -52,7 +53,7 @@ internal sealed class ElasticsearchDataModelMapper<TKey, TRecord> :
     }
 
     /// <inheritdoc />
-    public (string? id, JsonObject document) MapFromDataToStorageModel(TRecord dataModel)
+    public (string? id, JsonObject document) MapFromDataToStorageModel(TRecord dataModel, Embedding<float>?[]? generatedEmbeddings)
     {
         Verify.NotNull(dataModel);
 
@@ -60,14 +61,27 @@ internal sealed class ElasticsearchDataModelMapper<TKey, TRecord> :
 
         var document = SerializeSource(dataModel, _elasticsearchClientSettings);
 
-        // Extract key property.
+        // Extract key property and remove it from document.
 
         var keyProperty = _model.KeyProperty;
         var id = (TKey?)keyProperty.GetValueAsObject(dataModel);
-
-        // Remove key property from document.
-
         document.Remove(keyProperty.StorageName);
+
+        // Update vector properties with generated embeddings.
+
+        if (generatedEmbeddings is not null)
+        {
+            for (var i = 0; i < _model.VectorProperties.Count; ++i)
+            {
+                if (generatedEmbeddings[i] is not {} embedding)
+                {
+                    continue;
+                }
+
+                var vectorProperty = _model.VectorProperties[i];
+                document[vectorProperty.StorageName] = JsonValue.Create(embedding.Vector);
+            }
+        }
 
         return ((id is null) ? null : ElasticsearchVectorStoreRecordFieldMapping.KeyToElasticsearchId(id), document);
     }

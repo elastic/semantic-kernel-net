@@ -284,6 +284,8 @@ internal class MockableElasticsearchClient
     /// </summary>
     /// <param name="indexName"></param>
     /// <param name="query"></param>
+    /// <param name="sort"></param>
+    /// <param name="sourceExcludes"></param>
     /// <param name="from"></param>
     /// <param name="size"></param>
     /// <param name="cancellationToken"></param>
@@ -292,6 +294,7 @@ internal class MockableElasticsearchClient
     public virtual async Task<IReadOnlyCollection<Hit<JsonObject>>> SearchAsync(
         IndexName indexName,
         Query query,
+        ICollection<SortOptions>? sort,
         Fields? sourceExcludes,
         int? from,
         int? size,
@@ -305,6 +308,7 @@ internal class MockableElasticsearchClient
                 new SearchRequest(indexName)
                 {
                     Query = query,
+                    Sort = sort,
                     SourceExcludes = sourceExcludes,
                     From = from,
                     Size = size,
