@@ -128,7 +128,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
             _mapper = new ElasticsearchDataModelMapper<TKey, TRecord>(_model, _elasticsearchClient.ElasticsearchClient.ElasticsearchClientSettings);
         }
 
-        _vectorFields = Fields.FromFields(_model.VectorProperties.Select(x => new Field(x.StorageName)).ToArray());
+        _vectorFields = Fields.FromFields(_model.VectorProperties.Select(x => new Field(x.StorageName)).ToArray())!;
     }
 
     #region IVectorStoreRecordCollection

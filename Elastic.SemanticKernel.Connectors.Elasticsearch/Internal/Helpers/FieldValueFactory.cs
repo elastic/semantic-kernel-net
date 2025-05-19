@@ -2,7 +2,7 @@ using System;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch.Internal.Helpers;
 
-internal class FieldValueFactory
+internal static class FieldValueFactory
 {
     public static Elastic.Clients.Elasticsearch.FieldValue FromValue(object? value)
     {

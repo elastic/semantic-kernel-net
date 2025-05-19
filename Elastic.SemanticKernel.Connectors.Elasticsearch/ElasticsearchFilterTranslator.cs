@@ -54,7 +54,9 @@ internal sealed class ElasticsearchFilterTranslator
 
             MethodCallExpression methodCall => TranslateMethodCall(methodCall),
 
+#pragma warning disable CA1508
             _ => throw new NotSupportedException("Elasticsearch does not support the following NodeType in filters: " + node?.NodeType)
+#pragma warning restore CA1508
         };
     }
 

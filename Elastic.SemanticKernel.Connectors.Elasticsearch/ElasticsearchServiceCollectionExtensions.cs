@@ -106,7 +106,7 @@ public static class ElasticsearchServiceCollectionExtensions
                     EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
                 };
 
-                return (new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options) as IVectorStoreRecordCollection<TKey, TRecord>)!;
+                return new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options);
             });
 
         AddVectorizedSearch<TKey, TRecord>(services, serviceId);
@@ -145,7 +145,7 @@ public static class ElasticsearchServiceCollectionExtensions
                     EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
                 };
 
-                return (new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options) as IVectorStoreRecordCollection<TKey, TRecord>)!;
+                return new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options);
             });
 
         AddVectorizedSearch<TKey, TRecord>(services, serviceId);
