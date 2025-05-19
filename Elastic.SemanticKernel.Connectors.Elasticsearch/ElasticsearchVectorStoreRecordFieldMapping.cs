@@ -65,12 +65,13 @@ internal static class ElasticsearchVectorStoreRecordFieldMapping
     }
 
     public static string KeyToElasticsearchId<TKey>(TKey key)
+        where TKey : notnull
     {
         return key switch
         {
             string => (string)(object)key,
-            long => key.ToString(),
-            Guid => key.ToString(),
+            long => key.ToString()!,
+            Guid => key.ToString()!,
             _ => throw new NotSupportedException($"The provided key type '{key.GetType().Name}' is not supported by Elasticsearch.")
         };
     }

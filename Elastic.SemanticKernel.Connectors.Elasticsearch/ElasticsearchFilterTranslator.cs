@@ -1,9 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
@@ -13,7 +15,7 @@ using Microsoft.Extensions.VectorData.ConnectorSupport.Filter;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
-internal class ElasticsearchFilterTranslator
+internal sealed class ElasticsearchFilterTranslator
 {
     private VectorStoreRecordModel _model = null!;
     private ParameterExpression _recordParameter = null!;
@@ -129,7 +131,7 @@ internal class ElasticsearchFilterTranslator
             {
                 Method.Name: nameof(Enumerable.Contains), Arguments: [var source, var item]
             } contains
-                when contains.Method.DeclaringType == typeof(Enumerable)
+                when (contains.Method.DeclaringType == typeof(Enumerable))
                 => TranslateContains(source, item),
 
             // List.Contains()
@@ -142,7 +144,7 @@ internal class ElasticsearchFilterTranslator
                 Object: { } source,
                 Arguments: [var item]
             }
-                when declaringType.GetGenericTypeDefinition() == typeof(List<>)
+                when (declaringType.GetGenericTypeDefinition() == typeof(List<>))
                 => TranslateContains(source, item),
 
             _ => throw new NotSupportedException($"Unsupported method call: {methodCall.Method.DeclaringType?.Name}.{methodCall.Method.Name}.")
@@ -151,7 +153,62 @@ internal class ElasticsearchFilterTranslator
 
     private Query TranslateContains(Expression source, Expression item)
     {
-        throw new NotImplementedException();
+        switch (source)
+        {
+            // Contains over field enumerable.
+            case var _ when TryBindProperty(source, out var enumerableProperty):
+            {
+                if (item is not ConstantExpression constant)
+                {
+                    throw new NotSupportedException("Value must be a constant.");
+                }
+
+                return new Query { Terms = new(enumerableProperty.StorageName, new[] { FieldValue.FromValue(constant.Value) }) };
+            }
+
+            // Contains over inline enumerable.
+            case NewArrayExpression newArray:
+            {
+                var elements = new object?[newArray.Expressions.Count];
+
+                for (var i = 0; i < newArray.Expressions.Count; i++)
+                {
+                    if (newArray.Expressions[i] is not ConstantExpression { Value: var elementValue })
+                    {
+                        throw new NotSupportedException("Inline array elements must be constants.");
+                    }
+
+                    elements[i] = elementValue;
+                }
+
+                return ProcessInlineEnumerable(elements, item);
+            }
+
+            case ConstantExpression { Value: IEnumerable enumerable and not string }:
+            {
+                return ProcessInlineEnumerable(enumerable, item);
+            }
+
+            default:
+                throw new NotSupportedException("Unsupported Contains filter.");
+        }
+
+        Query ProcessInlineEnumerable(IEnumerable elements, Expression item)
+        {
+            if (!TryBindProperty(item, out var property))
+            {
+                throw new NotSupportedException("Unsupported item type in Contains filter.");
+            }
+
+            var values = new List<FieldValue>();
+
+            foreach (var element in elements)
+            {
+                values.Add(FieldValue.FromValue(element));
+            }
+
+            return new Query { Terms = new(property.StorageName, values.ToArray()) };
+        }
     }
 
     private bool TryBindProperty(Expression expression, [NotNullWhen(true)] out VectorStoreRecordPropertyModel? property)

@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -73,7 +72,7 @@ internal sealed class ElasticsearchDataModelMapper<TKey, TRecord> :
         {
             for (var i = 0; i < _model.VectorProperties.Count; ++i)
             {
-                if (generatedEmbeddings[i] is not {} embedding)
+                if (generatedEmbeddings[i] is not { } embedding)
                 {
                     continue;
                 }
