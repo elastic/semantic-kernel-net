@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.Core.Search;
 using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Clients.Elasticsearch.Mapping;
 using Elastic.Clients.Elasticsearch.QueryDsl;
@@ -85,7 +86,7 @@ internal class MockableElasticsearchClient
             throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
         }
 
-        return response.Indices?.Keys.ToArray() ?? [];
+        return response.Indices?.Keys.Where(x => x[0] != '.').ToArray() ?? [];
     }
 
     /// <summary>
@@ -182,6 +183,7 @@ internal class MockableElasticsearchClient
     public virtual async Task<(string id, JsonObject document)?> GetDocumentAsync(
         IndexName indexName,
         Id id,
+        Fields? sourceExcludes,
         CancellationToken cancellationToken = default)
     {
         Verify.NotNull(indexName);
@@ -191,6 +193,7 @@ internal class MockableElasticsearchClient
             .GetAsync<JsonObject>(
                 new GetRequest(indexName, id)
                 {
+                    SourceExcludes = sourceExcludes,
                     RequestConfiguration = CustomUserAgentRequestConfiguration
                 },
                 cancellationToken)
@@ -281,14 +284,18 @@ internal class MockableElasticsearchClient
     /// </summary>
     /// <param name="indexName"></param>
     /// <param name="query"></param>
+    /// <param name="sort"></param>
+    /// <param name="sourceExcludes"></param>
     /// <param name="from"></param>
     /// <param name="size"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     /// <exception cref="TransportException"></exception>
-    public virtual async Task<(long total, (string id, JsonObject document, double? score)[] hits)> SearchAsync(
+    public virtual async Task<IReadOnlyCollection<Hit<JsonObject>>> SearchAsync(
         IndexName indexName,
         Query query,
+        ICollection<SortOptions>? sort,
+        Fields? sourceExcludes,
         int? from,
         int? size,
         CancellationToken cancellationToken = default)
@@ -301,6 +308,8 @@ internal class MockableElasticsearchClient
                 new SearchRequest(indexName)
                 {
                     Query = query,
+                    Sort = sort,
+                    SourceExcludes = sourceExcludes,
                     From = from,
                     Size = size,
                     RequestConfiguration = CustomUserAgentRequestConfiguration
@@ -314,7 +323,59 @@ internal class MockableElasticsearchClient
             throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
         }
 
-        return (response.Total, [.. response.Hits.Select(hit => (hit.Id!, hit.Source!, hit.Score))]);
+        return response.Hits;
+    }
+
+    /// <summary>
+    /// TODO: TBC
+    /// </summary>
+    /// <param name="indexName"></param>
+    /// <param name="knn"></param>
+    /// <param name="query"></param>
+    /// <param name="rank"></param>
+    /// <param name="sourceExcludes"></param>
+    /// <param name="from"></param>
+    /// <param name="size"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <exception cref="TransportException"></exception>
+    public virtual async Task<IReadOnlyCollection<Hit<JsonObject>>> HybridSearchAsync(
+        IndexName indexName,
+        KnnSearch knn,
+        Query query,
+        Rank rank,
+        Fields? sourceExcludes,
+        int? from,
+        int? size,
+        CancellationToken cancellationToken = default)
+    {
+        Verify.NotNull(indexName);
+        Verify.NotNull(knn);
+        Verify.NotNull(query);
+        Verify.NotNull(rank);
+
+        var response = await ElasticsearchClient
+            .SearchAsync<JsonObject>(
+                new SearchRequest(indexName)
+                {
+                    Knn = [knn],
+                    Query = query,
+                    Rank = rank,
+                    SourceExcludes = sourceExcludes,
+                    From = from,
+                    Size = size,
+                    RequestConfiguration = CustomUserAgentRequestConfiguration
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccess())
+        {
+            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
+        }
+
+        return response.Hits;
     }
 }
 

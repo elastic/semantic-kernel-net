@@ -8,8 +8,10 @@ using System.Linq;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using Elastic.SemanticKernel.Connectors.Elasticsearch.Internal.Helpers;
 
 using Microsoft.Extensions.VectorData;
+using Microsoft.Extensions.VectorData.ConnectorSupport;
 using Microsoft.SemanticKernel;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
@@ -19,20 +21,22 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 /// </summary>
 internal static class ElasticsearchVectorStoreCollectionSearchMapping
 {
+#pragma warning disable CS0618 // Type or member is obsolete
+
     /// <summary>
     /// Build a list of Elasticsearch filter <see cref="Query"/> from the provided <see cref="VectorSearchFilter"/>.
     /// </summary>
     /// <param name="basicVectorSearchFilter">The <see cref="VectorSearchFilter"/> to build the Elasticsearch filter queries from.</param>
-    /// <param name="propertyToStorageName">A mapping from <see cref="VectorStoreRecordDefinition" /> to storage model property name.</param>
+    /// <param name="model">A model representing a record in a vector store collection.</param>
     /// <returns>The Elasticsearch filter queries.</returns>
     /// <exception cref="NotSupportedException">Thrown when the provided filter contains unsupported types, values or unknown properties.</exception>
-    public static ICollection<Query> BuildFilter(VectorSearchFilter? basicVectorSearchFilter, Dictionary<VectorStoreRecordProperty, string> propertyToStorageName)
+    public static Query? BuildFromLegacyFilter(VectorSearchFilter? basicVectorSearchFilter, VectorStoreRecordModel model)
     {
-        Verify.NotNull(propertyToStorageName);
+        Verify.NotNull(model);
 
         if (basicVectorSearchFilter is null)
         {
-            return [];
+            return null;
         }
 
         var filterClauses = basicVectorSearchFilter.FilterClauses.ToArray();
@@ -44,88 +48,47 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
             {
                 case EqualToFilterClause equalToClause:
                 {
-                    var mapping = GetPropertyNameMapping(equalToClause.FieldName);
-                    VerifyFilterable(mapping.Key);
+                    var propertyModel = GetPropertyNameMapping(equalToClause.FieldName);
 
-                    filterQueries.Add(Query.Term(new TermQuery(mapping.Value!)
-                    {
-                        Value = FieldValueFromValue(equalToClause.Value)
-                    }));
+                    filterQueries.Add(new TermQuery(field: propertyModel.StorageName!) { Value = FieldValueFactory.FromValue(equalToClause.Value) });
 
                     break;
                 }
                 case AnyTagEqualToFilterClause anyTagEqualToClause:
                 {
-                    var mapping = GetPropertyNameMapping(anyTagEqualToClause.FieldName);
-                    VerifyFilterable(mapping.Key);
+                    var propertyModel = GetPropertyNameMapping(anyTagEqualToClause.FieldName);
 
-                    filterQueries.Add(Query.Terms(new TermsQuery
+                    filterQueries.Add(new TermsQuery
                     {
-                        Field = mapping.Value!,
-                        Terms = new TermsQueryField([FieldValueFromValue(anyTagEqualToClause.Value)])
-                    }));
+                        Field = propertyModel.StorageName!,
+                        Terms = new TermsQueryField([FieldValueFactory.FromValue(anyTagEqualToClause.Value)])
+                    });
 
                     break;
                 }
 
                 default:
-                    throw new NotSupportedException($"Filter clause of type {filterClause.GetType().FullName} is not supported.");
+                    throw new InvalidOperationException($"Unsupported filter clause type '{filterClause.GetType().Name}'.");
             }
         }
 
-        return filterQueries;
+        return Query.Bool(new() { Must = filterQueries });
 
-        KeyValuePair<VectorStoreRecordProperty, string> GetPropertyNameMapping(string dataModelPropertyName)
+        VectorStoreRecordDataPropertyModel GetPropertyNameMapping(string fieldName)
         {
-            var result = propertyToStorageName
-                .FirstOrDefault(x => string.Equals(x.Key.DataModelPropertyName, dataModelPropertyName, StringComparison.Ordinal));
-
-            if (result.Key is null)
+            if (!model.PropertyMap.TryGetValue(fieldName, out var property))
             {
-                throw new NotSupportedException($"Property '{dataModelPropertyName}' is not supported as a filter value.");
+                throw new InvalidOperationException($"Property name '{fieldName}' provided as part of the filter clause is not a valid property name.");
             }
 
-            return result;
-        }
-
-        static void VerifyFilterable(VectorStoreRecordProperty property)
-        {
-            if (property is not VectorStoreRecordDataProperty { IsFilterable: true })
+            if (property is not VectorStoreRecordDataPropertyModel { IsIndexed: true } dataProperty)
             {
-                throw new NotSupportedException($"Property '{property.DataModelPropertyName}' can not be used for filtering.");
+                throw new InvalidOperationException($"Property '{fieldName}' is not an indexed data property.");
             }
+
+            return dataProperty;
         }
     }
 
-    /// <summary>
-    /// TODO: TBC
-    /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    /// <exception cref="NotSupportedException"></exception>
-    private static FieldValue FieldValueFromValue(object? value)
-    {
-        // TODO: Implement FieldValue.FromValue() in Elasticsearch client
-        // TODO: FieldValue.Any()
-        // TODO: FieldValue.Array()
-
-        return value switch
-        {
-            null => FieldValue.Null,
-            bool v => v,
-            float v => v,
-            double v => v,
-            sbyte v => v,
-            short v => v,
-            int v => v,
-            long v => v,
-            byte v => v,
-            ushort v => v,
-            uint v => v,
-            ulong v => v,
-            string v => v,
-            char v => v,
-            _ => throw new NotSupportedException($"Unsupported filter value type '{value!.GetType().Name}'.")
-        };
-    }
+#pragma warning restore CS0618 // Type or member is obsolete
 }
