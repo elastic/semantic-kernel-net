@@ -8,6 +8,7 @@ using System.Linq;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using Elastic.SemanticKernel.Connectors.Elasticsearch.Internal.Helpers;
 
 using Microsoft.Extensions.VectorData;
 using Microsoft.Extensions.VectorData.ConnectorSupport;
@@ -49,7 +50,7 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
                 {
                     var propertyModel = GetPropertyNameMapping(equalToClause.FieldName);
 
-                    filterQueries.Add(new TermQuery(field: propertyModel.StorageName, value: FieldValue.FromValue(equalToClause.Value)));
+                    filterQueries.Add(new TermQuery(field: propertyModel.StorageName!) { Value = FieldValueFactory.FromValue(equalToClause.Value) });
 
                     break;
                 }
@@ -57,7 +58,11 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
                 {
                     var propertyModel = GetPropertyNameMapping(anyTagEqualToClause.FieldName);
 
-                    filterQueries.Add(new TermsQuery(field: propertyModel.StorageName, terms: new TermsQueryField([FieldValue.FromValue(anyTagEqualToClause.Value)])));
+                    filterQueries.Add(new TermsQuery
+                    {
+                        Field = propertyModel.StorageName!,
+                        Terms = new TermsQueryField([FieldValueFactory.FromValue(anyTagEqualToClause.Value)])
+                    });
 
                     break;
                 }
@@ -67,7 +72,7 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
             }
         }
 
-        return new Query { Bool = new() { Must = filterQueries } };
+        return Query.Bool(new() { Must = filterQueries });
 
         VectorStoreRecordDataPropertyModel GetPropertyNameMapping(string fieldName)
         {

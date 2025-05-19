@@ -5,10 +5,10 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text.RegularExpressions;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using Elastic.SemanticKernel.Connectors.Elasticsearch.Internal.Helpers;
 
 using Microsoft.Extensions.VectorData.ConnectorSupport;
 using Microsoft.Extensions.VectorData.ConnectorSupport.Filter;
@@ -70,11 +70,11 @@ internal sealed class ElasticsearchFilterTranslator
     private static Query GenerateEqual(string propertyStorageName, object? value, bool negated = false)
     {
         var coreQuery = value is null
-            ? new Query { Exists = new(propertyStorageName) }
-            : new Query { Match = new(propertyStorageName, FieldValue.FromValue(value)) };
+            ? Query.Exists(new ExistsQuery { Field = propertyStorageName! })
+            : Query.Match(new MatchQuery(propertyStorageName!) { Query = FieldValueFactory.FromValue(value) });
 
         return negated
-            ? new Query { Bool = new() { MustNot = [coreQuery] } }
+            ? Query.Bool(new BoolQuery { MustNot = [coreQuery] })
             : coreQuery;
     }
 
@@ -91,10 +91,10 @@ internal sealed class ElasticsearchFilterTranslator
     {
         return nodeType switch
         {
-            ExpressionType.GreaterThan => new Query { Range = new UntypedRangeQuery(propertyStorageName) { Gt = value } },
-            ExpressionType.GreaterThanOrEqual => new Query { Range = new UntypedRangeQuery(propertyStorageName) { Gte = value } },
-            ExpressionType.LessThan => new Query { Range = new UntypedRangeQuery(propertyStorageName) { Lt = value } },
-            ExpressionType.LessThanOrEqual => new Query { Range = new UntypedRangeQuery(propertyStorageName) { Lte = value } },
+            ExpressionType.GreaterThan => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Gt = value }),
+            ExpressionType.GreaterThanOrEqual => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Gte = value }),
+            ExpressionType.LessThan => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Lt = value }),
+            ExpressionType.LessThanOrEqual => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Lte = value }),
 
             _ => throw new InvalidOperationException("Unreachable")
         };
@@ -163,7 +163,11 @@ internal sealed class ElasticsearchFilterTranslator
                     throw new NotSupportedException("Value must be a constant.");
                 }
 
-                return new Query { Terms = new(enumerableProperty.StorageName, new[] { FieldValue.FromValue(constant.Value) }) };
+                return Query.Terms(new()
+                {
+                    Field = enumerableProperty.StorageName!,
+                    Terms = new TermsQueryField([FieldValueFactory.FromValue(constant.Value)])
+                });
             }
 
             // Contains over inline enumerable.
@@ -204,10 +208,14 @@ internal sealed class ElasticsearchFilterTranslator
 
             foreach (var element in elements)
             {
-                values.Add(FieldValue.FromValue(element));
+                values.Add(FieldValueFactory.FromValue(element));
             }
 
-            return new Query { Terms = new(property.StorageName, values.ToArray()) };
+            return Query.Terms(new()
+            {
+                Field = property.StorageName!,
+                Terms = new TermsQueryField(values.ToArray()),
+            });
         }
     }
 

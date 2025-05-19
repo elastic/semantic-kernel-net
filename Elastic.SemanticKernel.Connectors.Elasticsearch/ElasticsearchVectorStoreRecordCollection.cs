@@ -242,19 +242,16 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
         if (options.OrderBy?.Values?.Count is > 0)
         {
             sort = options.OrderBy.Values
-                .Select(sortInfo => new SortOptions
+                .Select(sortInfo => SortOptions.Field(_model.GetDataOrKeyProperty(sortInfo.PropertySelector).StorageName!, new FieldSort
                 {
-                    Field = new FieldSort(_model.GetDataOrKeyProperty(sortInfo.PropertySelector).StorageName)
-                    {
-                        Order = sortInfo.Ascending ? SortOrder.Asc : SortOrder.Desc
-                    }
-                })
+                    Order = sortInfo.Ascending ? SortOrder.Asc : SortOrder.Desc
+                }))
                 .ToList();
         }
 
         // Build search query.
 
-        var query = translatedFilter ?? new Query { MatchAll = new() };
+        var query = translatedFilter ?? new MatchAllQuery();
 
         // Execute search query.
 
@@ -460,8 +457,9 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
 
         // Build search query.
 
-        var knnQuery = new KnnQuery(field: vectorProperty.StorageName)
+        var knnQuery = new KnnQuery
         {
+            Field = vectorProperty.StorageName!,
             QueryVector = floatVector.ToArray(),
             Filter = filter is null ? null : [filter]
         };
@@ -472,7 +470,7 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
                 "search",
                 () => _elasticsearchClient.SearchAsync(
                     _collectionName,
-                    new Query { Knn = knnQuery },
+                    Query.Knn(knnQuery),
                     null,
                     options.IncludeVectors ? null : _vectorFields,
                     options.Skip,
@@ -550,31 +548,30 @@ public sealed class ElasticsearchVectorStoreRecordCollection<TKey, TRecord> :
 
         // Build search query.
 
-        var knn = new KnnSearch(field: vectorProperty.StorageName)
+        var knn = new KnnSearch
         {
-            K = top,
+            Field = vectorProperty.StorageName!,
+            k = top,
             NumCandidates = Math.Max((int)Math.Ceiling(1.5f * top), 100),
             QueryVector = floatVector,
             Filter = filter is null ? null : [filter]
         };
 
-        var query = new Query
+        var query = Query.Terms(new TermsQuery()
         {
-            Terms = new TermsQuery(field: textDataProperty.StorageName, terms: keywords.Select(FieldValue.String).ToArray())
-        };
+            Field = textDataProperty.StorageName!,
+            Terms = new TermsQueryField(keywords.Select(FieldValue.String).ToArray())
+        });
 
         if (filter is not null)
         {
             query = filter && query;
         }
 
-        var rank = new Rank
+        var rank = Rank.Rrf(new RrfRank
         {
-            Rrf = new RrfRank
-            {
-                RankWindowSize = knn.NumCandidates
-            }
-        };
+            RankWindowSize = knn.NumCandidates
+        });
 
         // Execute search query.
 
