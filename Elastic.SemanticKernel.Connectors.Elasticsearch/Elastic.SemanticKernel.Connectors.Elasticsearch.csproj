@@ -34,7 +34,6 @@
 
   <ItemGroup>
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
-    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.SemanticKernel.Abstractions" />
     <PackageReference Include="MinVer" />

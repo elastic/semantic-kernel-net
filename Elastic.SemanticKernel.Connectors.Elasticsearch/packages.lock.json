@@ -17,15 +17,6 @@
         "resolved": "1.0.334",
         "contentHash": "Bi/e5guuwmyPL7Kp1G+PbcDvZFKsZxuHmc39IpYHAhWOvV8I/uIHPwAZ++Fa8k/w6pEqPdHCIrxSCelMNmu0dQ=="
       },
-      "Microsoft.Extensions.AI.Abstractions": {
-        "type": "Direct",
-        "requested": "[9.5.0-preview.1.25262.9, )",
-        "resolved": "9.5.0-preview.1.25262.9",
-        "contentHash": "b1IL+YciwqRkSCL1W6B4a99Ho4Oxu7yBkp8ykUleD58/tiFgeajVL84VaichMEnt8YRLt61dh89dwJEcdy1lgg==",
-        "dependencies": {
-          "System.Text.Json": "8.0.5"
-        }
-      },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "Direct",
         "requested": "[9.0.5, )",
@@ -115,6 +106,14 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "pTj+D3uJWyN3My70i2Hqo+OXixq3Os2D1nJ2x92FFo6sk8fYS1m1WLNTs0Dc1uPaViH0YvEEwvzddQ7y4rhXmA=="
+      },
+      "Microsoft.Extensions.AI.Abstractions": {
+        "type": "Transitive",
+        "resolved": "9.5.0-preview.1.25262.9",
+        "contentHash": "b1IL+YciwqRkSCL1W6B4a99Ho4Oxu7yBkp8ykUleD58/tiFgeajVL84VaichMEnt8YRLt61dh89dwJEcdy1lgg==",
+        "dependencies": {
+          "System.Text.Json": "8.0.5"
+        }
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "Transitive",
@@ -220,12 +219,6 @@
         "resolved": "1.0.334",
         "contentHash": "Bi/e5guuwmyPL7Kp1G+PbcDvZFKsZxuHmc39IpYHAhWOvV8I/uIHPwAZ++Fa8k/w6pEqPdHCIrxSCelMNmu0dQ=="
       },
-      "Microsoft.Extensions.AI.Abstractions": {
-        "type": "Direct",
-        "requested": "[9.5.0-preview.1.25262.9, )",
-        "resolved": "9.5.0-preview.1.25262.9",
-        "contentHash": "b1IL+YciwqRkSCL1W6B4a99Ho4Oxu7yBkp8ykUleD58/tiFgeajVL84VaichMEnt8YRLt61dh89dwJEcdy1lgg=="
-      },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "Direct",
         "requested": "[9.0.5, )",
@@ -284,6 +277,11 @@
         "type": "Transitive",
         "resolved": "1.1.1",
         "contentHash": "MalY0Y/uM/LjXtHfX/26l2VtN4LDNZ2OE3aumNOHDLsT4fNYy2hiHXI4CXCqKpNUNm7iJ2brrc4J89UdaL56FA=="
+      },
+      "Microsoft.Extensions.AI.Abstractions": {
+        "type": "Transitive",
+        "resolved": "9.5.0-preview.1.25262.9",
+        "contentHash": "b1IL+YciwqRkSCL1W6B4a99Ho4Oxu7yBkp8ykUleD58/tiFgeajVL84VaichMEnt8YRLt61dh89dwJEcdy1lgg=="
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "Transitive",
