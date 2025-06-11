@@ -10,24 +10,24 @@ using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.SemanticKernel.Connectors.Elasticsearch.Internal.Helpers;
 
-using Microsoft.Extensions.VectorData.ConnectorSupport;
-using Microsoft.Extensions.VectorData.ConnectorSupport.Filter;
+using Microsoft.Extensions.VectorData.ProviderServices;
+using Microsoft.Extensions.VectorData.ProviderServices.Filter;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
 internal sealed class ElasticsearchFilterTranslator
 {
-    private VectorStoreRecordModel _model = null!;
+    private CollectionModel _model = null!;
     private ParameterExpression _recordParameter = null!;
 
-    public Query? Translate(LambdaExpression lambdaExpression, VectorStoreRecordModel model)
+    public Query? Translate(LambdaExpression lambdaExpression, CollectionModel model)
     {
         _model = model;
 
         Debug.Assert(lambdaExpression.Parameters.Count == 1);
         _recordParameter = lambdaExpression.Parameters[0];
 
-        var preprocessor = new FilterTranslationPreprocessor { InlineCapturedVariables = true };
+        var preprocessor = new FilterTranslationPreprocessor { SupportsParameterization = false };
         var preprocessedExpression = preprocessor.Visit(lambdaExpression.Body);
 
         return Translate(preprocessedExpression);
@@ -72,7 +72,7 @@ internal sealed class ElasticsearchFilterTranslator
     private static Query GenerateEqual(string propertyStorageName, object? value, bool negated = false)
     {
         var coreQuery = value is null
-            ? Query.Exists(new ExistsQuery { Field = propertyStorageName! })
+            ? new BoolQuery { MustNot = [ new ExistsQuery { Field = propertyStorageName! } ] }
             : Query.Match(new MatchQuery(propertyStorageName!) { Query = FieldValueFactory.FromValue(value) });
 
         return negated
@@ -221,27 +221,27 @@ internal sealed class ElasticsearchFilterTranslator
         }
     }
 
-    private bool TryBindProperty(Expression expression, [NotNullWhen(true)] out VectorStoreRecordPropertyModel? property)
+    private bool TryBindProperty(Expression expression, [NotNullWhen(true)] out PropertyModel? property)
     {
-        Type? convertedClrType = null;
-
-        if (expression is UnaryExpression { NodeType: ExpressionType.Convert } unary)
+        var unwrappedExpression = expression;
+        while (unwrappedExpression is UnaryExpression { NodeType: ExpressionType.Convert } convert)
         {
-            expression = unary.Operand;
-            convertedClrType = unary.Type;
+            unwrappedExpression = convert.Operand;
         }
 
-        var modelName = expression switch
+        var modelName = unwrappedExpression switch
         {
             // Regular member access for strongly-typed POCO binding (e.g. r => r.SomeInt == 8)
-            MemberExpression memberExpression when memberExpression.Expression == _recordParameter => memberExpression.Member.Name,
+            MemberExpression memberExpression when memberExpression.Expression == this._recordParameter
+                => memberExpression.Member.Name,
 
             // Dictionary lookup for weakly-typed dynamic binding (e.g. r => r["SomeInt"] == 8)
             MethodCallExpression
             {
                 Method: { Name: "get_Item", DeclaringType: var declaringType },
                 Arguments: [ConstantExpression { Value: string keyName }]
-            } methodCall when methodCall.Object == _recordParameter && declaringType == typeof(Dictionary<string, object?>) => keyName,
+            } methodCall when methodCall.Object == this._recordParameter && declaringType == typeof(Dictionary<string, object?>)
+                => keyName,
 
             _ => null
         };
@@ -252,14 +252,22 @@ internal sealed class ElasticsearchFilterTranslator
             return false;
         }
 
-        if (!_model.PropertyMap.TryGetValue(modelName, out property))
+        if (!this._model.PropertyMap.TryGetValue(modelName, out property))
         {
             throw new InvalidOperationException($"Property name '{modelName}' provided as part of the filter clause is not a valid property name.");
         }
 
-        if (convertedClrType is not null && convertedClrType != property.Type)
+        // Now that we have the property, go over all wrapping Convert nodes again to ensure that they're compatible with the property type
+        unwrappedExpression = expression;
+        while (unwrappedExpression is UnaryExpression { NodeType: ExpressionType.Convert } convert)
         {
-            throw new InvalidCastException($"Property '{property.ModelName}' is being cast to type '{convertedClrType.Name}', but its configured type is '{property.Type.Name}'.");
+            var convertType = Nullable.GetUnderlyingType(convert.Type) ?? convert.Type;
+            if (convertType != property.Type && convertType != typeof(object))
+            {
+                throw new InvalidCastException($"Property '{property.ModelName}' is being cast to type '{convert.Type.Name}', but its configured type is '{property.Type.Name}'.");
+            }
+
+            unwrappedExpression = convert.Operand;
         }
 
         return true;

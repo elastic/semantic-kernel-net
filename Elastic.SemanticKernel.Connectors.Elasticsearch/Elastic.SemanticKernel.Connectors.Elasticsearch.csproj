@@ -26,6 +26,10 @@
     <NoWarn>IDE0130</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="..\Assets\logo.png" Pack="true" PackagePath="" Visible="false" />
     <Content Include="..\LICENSE" Pack="true" PackagePath="" Visible="false" />
@@ -35,7 +39,7 @@
   <ItemGroup>
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.SemanticKernel.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
     <PackageReference Include="MinVer" />
     <PackageReference Include="PolySharp">
       <PrivateAssets>all</PrivateAssets>

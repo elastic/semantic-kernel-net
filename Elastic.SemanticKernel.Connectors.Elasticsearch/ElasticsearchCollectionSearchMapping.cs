@@ -10,7 +10,7 @@ using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.SemanticKernel.Connectors.Elasticsearch.Internal.Helpers;
 
 using Microsoft.Extensions.VectorData;
-using Microsoft.Extensions.VectorData.ConnectorSupport;
+using Microsoft.Extensions.VectorData.ProviderServices;
 using Microsoft.SemanticKernel;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
@@ -18,7 +18,7 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 /// <summary>
 /// Contains mapping helpers to use when searching for documents using Elasticsearch.
 /// </summary>
-internal static class ElasticsearchVectorStoreCollectionSearchMapping
+internal static class ElasticsearchCollectionSearchMapping
 {
 #pragma warning disable CS0618 // Type or member is obsolete
 
@@ -29,7 +29,7 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
     /// <param name="model">A model representing a record in a vector store collection.</param>
     /// <returns>The Elasticsearch filter queries.</returns>
     /// <exception cref="NotSupportedException">Thrown when the provided filter contains unsupported types, values or unknown properties.</exception>
-    public static Query? BuildFromLegacyFilter(VectorSearchFilter? basicVectorSearchFilter, VectorStoreRecordModel model)
+    public static Query? BuildFromLegacyFilter(VectorSearchFilter? basicVectorSearchFilter, CollectionModel model)
     {
         Verify.NotNull(model);
 
@@ -73,14 +73,14 @@ internal static class ElasticsearchVectorStoreCollectionSearchMapping
 
         return Query.Bool(new() { Must = filterQueries });
 
-        VectorStoreRecordDataPropertyModel GetPropertyNameMapping(string fieldName)
+        DataPropertyModel GetPropertyNameMapping(string fieldName)
         {
             if (!model.PropertyMap.TryGetValue(fieldName, out var property))
             {
                 throw new InvalidOperationException($"Property name '{fieldName}' provided as part of the filter clause is not a valid property name.");
             }
 
-            if (property is not VectorStoreRecordDataPropertyModel { IsIndexed: true } dataProperty)
+            if (property is not DataPropertyModel { IsIndexed: true } dataProperty)
             {
                 throw new InvalidOperationException($"Property '{fieldName}' is not an indexed data property.");
             }

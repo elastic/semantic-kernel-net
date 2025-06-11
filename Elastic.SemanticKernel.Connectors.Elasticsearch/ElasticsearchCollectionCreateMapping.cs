@@ -7,14 +7,14 @@ using System;
 using Elastic.Clients.Elasticsearch.Mapping;
 
 using Microsoft.Extensions.VectorData;
-using Microsoft.Extensions.VectorData.ConnectorSupport;
+using Microsoft.Extensions.VectorData.ProviderServices;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
 /// <summary>
 /// Contains mapping helpers to use when creating an Elasticsearch vector collection.
 /// </summary>
-internal static class ElasticsearchVectorStoreCollectionCreateMapping
+internal static class ElasticsearchCollectionCreateMapping
 {
     /// <summary>
     /// TBC
@@ -22,7 +22,7 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
     /// <param name="model"></param>
     /// <returns></returns>
     public static Properties BuildPropertyMappings(
-        VectorStoreRecordModel model)
+        CollectionModel model)
     {
         var propertyMappings = new Properties();
 
@@ -51,7 +51,30 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
             }
             else if (property.IsIndexed)
             {
-                propertyMappings.Add(property.StorageName, new KeywordProperty());
+                IProperty? mapping = (Nullable.GetUnderlyingType(property.Type) ?? property.Type) switch
+                {
+                    { } t when t == typeof(string) => new KeywordProperty(),
+                    { } t when t == typeof(bool) => new BooleanProperty(),
+                    { } t when t == typeof(byte) => new ByteNumberProperty(),
+                    { } t when t == typeof(sbyte) => new ByteNumberProperty(),
+                    { } t when t == typeof(ushort) => new ShortNumberProperty(),
+                    { } t when t == typeof(short) => new ShortNumberProperty(),
+                    { } t when t == typeof(int) => new IntegerNumberProperty(),
+                    { } t when t == typeof(uint) => new IntegerNumberProperty(),
+                    { } t when t == typeof(long) => new LongNumberProperty(),
+                    { } t when t == typeof(ulong) => new UnsignedLongNumberProperty(),
+                    { } t when t == typeof(double) => new DoubleNumberProperty(),
+                    { } t when t == typeof(float) => new FloatNumberProperty(),
+                    { } t when t == typeof(DateTime) => new DateProperty(),
+                    { } t when t == typeof(DateTimeOffset) => new DateProperty(),
+                    _ => new KeywordProperty()
+                };
+
+                propertyMappings.Add(property.StorageName, mapping);
+            }
+            else
+            {
+                propertyMappings.Add(property.StorageName, new KeywordProperty { Index = false });
             }
         }
 
@@ -65,7 +88,7 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
     /// <param name="vectorProperty">The vector property definition.</param>
     /// <returns>The chosen Elasticsearch index kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown if an index kind is chosen that isn't supported by Elasticsearch.</exception>
-    private static DenseVectorIndexOptionsType GetIndexKind(VectorStoreRecordVectorPropertyModel vectorProperty)
+    private static DenseVectorIndexOptionsType GetIndexKind(VectorPropertyModel vectorProperty)
     {
         const string int8HnswIndexKind = "int8_hnsw";
         const string int4HnswIndexKind = "int4_hnsw";
@@ -102,7 +125,7 @@ internal static class ElasticsearchVectorStoreCollectionCreateMapping
     /// <exception cref="InvalidOperationException">
     /// Thrown if a distance function is chosen that isn't supported by Elasticsearch.
     /// </exception>
-    private static DenseVectorSimilarity GetSimilarityFunction(VectorStoreRecordVectorPropertyModel vectorProperty)
+    private static DenseVectorSimilarity GetSimilarityFunction(VectorPropertyModel vectorProperty)
     {
         const string maxInnerProductSimilarity = "max_inner_product";
 
