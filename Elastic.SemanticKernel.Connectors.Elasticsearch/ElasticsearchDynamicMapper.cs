@@ -122,6 +122,11 @@ internal sealed class ElasticsearchDynamicMapper :
                 continue;
             }
 
+            if (!includeVectors && property is VectorPropertyModel)
+            {
+                continue;
+            }
+
             if (!storageModel.document.TryGetPropertyValue(property.StorageName, out var value))
             {
                 // 
@@ -137,11 +142,6 @@ internal sealed class ElasticsearchDynamicMapper :
 
             if (property is VectorPropertyModel vectorProperty)
             {
-                if (!includeVectors)
-                {
-                    continue;
-                }
-
                 object vectorValue = (Nullable.GetUnderlyingType(vectorProperty.Type) ?? vectorProperty.Type) switch
                 {
                     {} t when t == typeof(ReadOnlyMemory<float>) => new ReadOnlyMemory<float>(ToArray<float>(value)),
