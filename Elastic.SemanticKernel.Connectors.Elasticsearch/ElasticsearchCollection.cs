@@ -187,11 +187,19 @@ public class ElasticsearchCollection<TKey, TRecord> :
     }
 
     /// <inheritdoc />
-    public override Task EnsureCollectionDeletedAsync(CancellationToken cancellationToken = default)
+    public override async Task EnsureCollectionDeletedAsync(CancellationToken cancellationToken = default)
     {
-        return RunOperationAsync(
-            "indices.delete",
-            () => _elasticsearchClient.DeleteIndexAsync(Name, cancellationToken));
+        try
+        {
+            await RunOperationAsync(
+                "indices.delete",
+                () => _elasticsearchClient.DeleteIndexAsync(Name, cancellationToken))
+                .ConfigureAwait(false);
+        }
+        catch (VectorStoreException e) when (e.InnerException is TransportException { ApiCallDetails.HttpStatusCode: 404 })
+        {
+            // Swallow "not found" exception.
+        }
     }
 
     /// <inheritdoc />
@@ -302,10 +310,17 @@ public class ElasticsearchCollection<TKey, TRecord> :
 
         var keyValue = ElasticsearchKeyMapping.KeyToElasticsearchId(key);
 
-        await RunOperationAsync(
-                "delete",
-                () => _elasticsearchClient.DeleteDocumentAsync(Name, keyValue, cancellationToken))
-            .ConfigureAwait(false);
+        try
+        {
+            await RunOperationAsync(
+                    "delete",
+                    () => _elasticsearchClient.DeleteDocumentAsync(Name, keyValue, cancellationToken))
+                .ConfigureAwait(false);
+        }
+        catch (VectorStoreException e) when (e.InnerException is TransportException { ApiCallDetails.HttpStatusCode: 404 })
+        {
+            // Swallow "not found" exception.
+        }
     }
 
     /// <inheritdoc />

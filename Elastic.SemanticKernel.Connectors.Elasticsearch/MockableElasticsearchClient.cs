@@ -134,6 +134,12 @@ internal class MockableElasticsearchClient :
                 cancellationToken)
             .ConfigureAwait(false);
 
+        if (response.ApiCallDetails.HttpStatusCode == 404)
+        {
+            // TODO: IsValidResponse should return `true` for ExistsResponse. Fix this upstream in the client library.
+            return false;
+        }
+
         ThrowOnError(response);
 
         return response.Exists;
@@ -212,6 +218,12 @@ internal class MockableElasticsearchClient :
                 },
                 cancellationToken)
             .ConfigureAwait(false);
+
+        if (response.ApiCallDetails.HttpStatusCode == 404)
+        {
+            // TODO: IsValidResponse should return `true` for GetResponse<T>. Fix this upstream in the client library.
+            return null;
+        }
 
         ThrowOnError(response);
 
@@ -389,7 +401,7 @@ internal class MockableElasticsearchClient :
 
     private static void ThrowOnError(ElasticsearchResponse response)
     {
-        if (!response.IsSuccess())
+        if (!response.IsValidResponse)
         {
             throw new TransportException(PipelineFailure.Unexpected, $"Failed to execute request:\n{response.ApiCallDetails}", response);
         }
