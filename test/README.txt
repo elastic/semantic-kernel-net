@@ -1,0 +1,1 @@
+Copied from https://github.com/microsoft/semantic-kernel/tree/dotnet-1.56.0
