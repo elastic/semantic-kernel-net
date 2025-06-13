@@ -2,173 +2,259 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using Elastic.Clients.Elasticsearch;
+using System;
+using System.Diagnostics.CodeAnalysis;
 
-using Microsoft.Extensions.DependencyInjection;
+using Elastic.Clients.Elasticsearch;
 using Elastic.SemanticKernel.Connectors.Elasticsearch;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
+using Microsoft.SemanticKernel;
 
-namespace Microsoft.SemanticKernel;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Extension methods to register Elasticsearch <see cref="IVectorStore"/> instances on an <see cref="IServiceCollection"/>.
+/// Extension methods to register <see cref="ElasticsearchVectorStore"/> and <see cref="ElasticsearchCollection{TKey, TRecord}"/>
+/// instances on an <see cref="IServiceCollection"/>.
 /// </summary>
 public static class ElasticsearchServiceCollectionExtensions
 {
+    private const string DynamicCodeMessage = "This method is incompatible with NativeAOT, consult the documentation for adding collections in a way that's compatible with NativeAOT.";
+    private const string UnreferencedCodeMessage = "This method is incompatible with trimming, consult the documentation for adding collections in a way that's compatible with NativeAOT.";
+
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStore"/> with the specified service ID and where <see cref="ElasticsearchClient"/> is retrieved from the dependency injection container.
+    /// Registers a <see cref="ElasticsearchVectorStore"/> as <see cref="VectorStore"/>
+    /// with <see cref="ElasticsearchClient"/> returned by <paramref name="clientProvider"/>
+    /// or retrieved from the dependency injection container if <paramref name="clientProvider"/> was not provided.
     /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="IVectorStore"/> on.</param>
-    /// <param name="options">Optional options to further configure the <see cref="IVectorStore"/>.</param>
-    /// <param name="serviceId">An optional service id to use as the service key.</param>
-    /// <returns>The service collection.</returns>
+    /// <inheritdoc cref="AddKeyedElasticsearchVectorStore(IServiceCollection, object?, Func{IServiceProvider, ElasticsearchClient}, Func{IServiceProvider, ElasticsearchVectorStoreOptions}?, ServiceLifetime)"/>
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
     public static IServiceCollection AddElasticsearchVectorStore(
         this IServiceCollection services,
-        ElasticsearchVectorStoreOptions? options = default,
-        string? serviceId = default)
+        Func<IServiceProvider, ElasticsearchClient>? clientProvider = default,
+        Func<IServiceProvider, ElasticsearchVectorStoreOptions>? optionsProvider = default,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
     {
-        // If we are not constructing the ElasticsearchClient, add the IVectorStore as transient, since we
-        // cannot make assumptions about how ElasticsearchClient is being managed.
-        services.AddKeyedTransient<IVectorStore>(
-            serviceId,
-            (sp, _) =>
-            {
-                var elasticsearchClient = sp.GetRequiredService<ElasticsearchClient>();
-                options ??= sp.GetService<ElasticsearchVectorStoreOptions>() ?? new()
-                {
-                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
-                };
+        return AddKeyedElasticsearchVectorStore(services, serviceKey: null, clientProvider, optionsProvider, lifetime);
+    }
 
-                return new ElasticsearchVectorStore(elasticsearchClient, options);
-            });
+    /// <summary>
+    /// Registers a keyed <see cref="ElasticsearchVectorStore"/> as <see cref="VectorStore"/>
+    /// with <see cref="ElasticsearchClient"/> returned by <paramref name="clientProvider"/> or retrieved from the dependency injection
+    /// container if <paramref name="clientProvider"/> was not provided.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="ElasticsearchVectorStore"/> on.</param>
+    /// <param name="serviceKey">The key with which to associate the vector store.</param>
+    /// <param name="clientProvider">The <see cref="ElasticsearchClient"/> provider.</param>
+    /// <param name="optionsProvider">Options provider to further configure the <see cref="ElasticsearchVectorStore"/>.</param>
+    /// <param name="lifetime">The service lifetime for the store. Defaults to <see cref="ServiceLifetime.Singleton"/>.</param>
+    /// <returns>Service collection.</returns>
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
+    public static IServiceCollection AddKeyedElasticsearchVectorStore(
+        this IServiceCollection services,
+        object? serviceKey,
+        Func<IServiceProvider, ElasticsearchClient>? clientProvider = default,
+        Func<IServiceProvider, ElasticsearchVectorStoreOptions>? optionsProvider = default,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+    {
+        Verify.NotNull(services);
+
+        services.Add(new ServiceDescriptor(typeof(ElasticsearchVectorStore), serviceKey, (sp, _) =>
+        {
+            var client = clientProvider is null ? sp.GetRequiredService<ElasticsearchClient>() : clientProvider(sp);
+            var options = GetStoreOptions(sp, optionsProvider);
+
+            // The client was restored from the DI container, so we do not own it.
+            return new ElasticsearchVectorStore(client, ownsClient: false, options);
+        }, lifetime));
+
+        services.Add(new ServiceDescriptor(typeof(VectorStore), serviceKey,
+            static (sp, key) => sp.GetRequiredKeyedService<ElasticsearchVectorStore>(key), lifetime));
 
         return services;
     }
 
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStore"/> with the specified service ID and where <see cref="ElasticsearchClient"/> is constructed using the provided client settings.
+    /// Registers a <see cref="ElasticsearchVectorStore"/> as <see cref="VectorStore"/>
+    /// with <see cref="ElasticsearchClient"/> created with <paramref name="clientSettings"/>.
     /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="IVectorStore"/> on.</param>
-    /// <param name="clientSettings">The Elasticsearch client settings.</param>
-    /// <param name="options">Optional options to further configure the <see cref="IVectorStore"/>.</param>
-    /// <param name="serviceId">An optional service id to use as the service key.</param>
-    /// <returns>The service collection.</returns>
+    /// <inheritdoc cref="AddKeyedElasticsearchVectorStore(IServiceCollection, object?, Func{IServiceProvider, ElasticsearchClient}, Func{IServiceProvider, ElasticsearchVectorStoreOptions}?, ServiceLifetime)"/>
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
     public static IServiceCollection AddElasticsearchVectorStore(
         this IServiceCollection services,
         IElasticsearchClientSettings clientSettings,
         ElasticsearchVectorStoreOptions? options = default,
-        string? serviceId = default)
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
     {
-        services.AddKeyedSingleton<IVectorStore>(
-            serviceId,
-            (sp, _) =>
-            {
-                var elasticsearchClient = new ElasticsearchClient(clientSettings);
-                options ??= sp.GetService<ElasticsearchVectorStoreOptions>() ?? new()
-                {
-                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
-                };
-
-                return new ElasticsearchVectorStore(elasticsearchClient, options);
-            });
-
-        return services;
+        return AddKeyedElasticsearchVectorStore(services, serviceKey: null, clientSettings, options, lifetime);
     }
 
     /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorSearch{TRecord}"/> with the specified service ID
-    /// and where the <see cref="ElasticsearchClient"/> is retrieved from the dependency injection container.
+    /// Registers a keyed <see cref="ElasticsearchVectorStore"/> as <see cref="VectorStore"/>
+    /// with <see cref="ElasticsearchClient"/> created with <paramref name="clientSettings"/>.
     /// </summary>
-    /// <typeparam name="TKey">The type of the key.</typeparam>
-    /// <typeparam name="TRecord">The type of the record.</typeparam>
-    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> on.</param>
-    /// <param name="collectionName">The name of the collection.</param>
-    /// <param name="options">Optional options to further configure the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/>.</param>
-    /// <param name="serviceId">An optional service id to use as the service key.</param>
-    /// <returns>Service collection.</returns>
-    public static IServiceCollection AddElasticsearchVectorStoreRecordCollection<TKey, TRecord>(
-        this IServiceCollection services,
-        string collectionName,
-        ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
-        string? serviceId = default)
-        where TKey : notnull
-        where TRecord : notnull
-    {
-        services.AddKeyedTransient<IVectorStoreRecordCollection<TKey, TRecord>>(
-            serviceId,
-            (sp, _) =>
-            {
-                var elasticsearchClient = sp.GetRequiredService<ElasticsearchClient>();
-                options ??= sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>() ?? new()
-                {
-                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
-                };
-
-                return new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options);
-            });
-
-        AddVectorizedSearch<TKey, TRecord>(services, serviceId);
-
-        return services;
-    }
-
-    /// <summary>
-    /// Register an Elasticsearch <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> and <see cref="IVectorSearch{TRecord}"/> with the specified service ID
-    /// and where the <see cref="ElasticsearchClient"/> is constructed using the provided client settings.
-    /// </summary>
-    /// <typeparam name="TKey">The type of the key.</typeparam>
-    /// <typeparam name="TRecord">The type of the record.</typeparam>
-    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> on.</param>
-    /// <param name="collectionName">The name of the collection.</param>
+    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="ElasticsearchVectorStore"/> on.</param>
+    /// <param name="serviceKey">The key with which to associate the vector store.</param>
     /// <param name="clientSettings">The Elasticsearch client settings.</param>
-    /// <param name="options">Optional options to further configure the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/>.</param>
-    /// <param name="serviceId">An optional service id to use as the service key.</param>
+    /// <param name="options">Options to further configure the <see cref="ElasticsearchVectorStore"/>.</param>
+    /// <param name="lifetime">The service lifetime for the store. Defaults to <see cref="ServiceLifetime.Singleton"/>.</param>
     /// <returns>Service collection.</returns>
-    public static IServiceCollection AddElasticsearchVectorStoreRecordCollection<TKey, TRecord>(
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
+    public static IServiceCollection AddKeyedElasticsearchVectorStore(
         this IServiceCollection services,
-        string collectionName,
+        object? serviceKey,
         IElasticsearchClientSettings clientSettings,
-        ElasticsearchVectorStoreRecordCollectionOptions<TRecord>? options = default,
-        string? serviceId = default)
-        where TKey : notnull
-        where TRecord : notnull
+        ElasticsearchVectorStoreOptions? options = default,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
     {
-        services.AddKeyedSingleton<IVectorStoreRecordCollection<TKey, TRecord>>(
-            serviceId,
-            (sp, _) =>
-            {
-                var elasticsearchClient = new ElasticsearchClient(clientSettings);
-                options ??= sp.GetService<ElasticsearchVectorStoreRecordCollectionOptions<TRecord>>() ?? new()
-                {
-                    EmbeddingGenerator = sp.GetService<IEmbeddingGenerator>()
-                };
+        Verify.NotNull(clientSettings);
 
-                return new ElasticsearchVectorStoreRecordCollection<TKey, TRecord>(elasticsearchClient, collectionName, options);
-            });
+        return AddKeyedElasticsearchVectorStore(services, serviceKey, _ => new ElasticsearchClient(clientSettings), _ => options!, lifetime);
+    }
 
-        AddVectorizedSearch<TKey, TRecord>(services, serviceId);
+    /// <summary>
+    /// Registers a <see cref="ElasticsearchCollection{TKey, TRecord}"/> as <see cref="VectorStoreCollection{TKey, TRecord}"/>
+    /// with <see cref="ElasticsearchClient"/> returned by <paramref name="clientProvider"/> or retrieved from the dependency injection container if <paramref name="clientProvider"/> was not provided.
+    /// </summary>
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
+    public static IServiceCollection AddElasticsearchCollection<TKey, TRecord>(
+        this IServiceCollection services,
+        string name,
+        Func<IServiceProvider, ElasticsearchClient>? clientProvider = default,
+        Func<IServiceProvider, ElasticsearchCollectionOptions>? optionsProvider = default,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+        where TKey : notnull
+        where TRecord : class
+    {
+        return AddKeyedElasticsearchCollection<TKey, TRecord>(services, serviceKey: null, name, clientProvider,
+            optionsProvider, lifetime);
+    }
+
+    /// <summary>
+    /// Registers a keyed <see cref="ElasticsearchCollection{TKey, TRecord}"/> as <see cref="VectorStoreCollection{TKey, TRecord}"/>
+    /// with <see cref="ElasticsearchClient"/> returned by <paramref name="clientProvider"/> or retrieved from the dependency injection container if <paramref name="clientProvider"/> was not provided.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="ElasticsearchCollection{TKey, TRecord}"/> on.</param>
+    /// <param name="serviceKey">The key with which to associate the collection.</param>
+    /// <param name="name">The name of the collection.</param>
+    /// <param name="clientProvider">The <see cref="ElasticsearchClient"/> provider.</param>
+    /// <param name="optionsProvider">Options provider to further configure the <see cref="ElasticsearchCollection{TKey, TRecord}"/>.</param>
+    /// <param name="lifetime">The service lifetime for the store. Defaults to <see cref="ServiceLifetime.Singleton"/>.</param>
+    /// <returns>Service collection.</returns>
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
+    public static IServiceCollection AddKeyedElasticsearchCollection<TKey, TRecord>(
+        this IServiceCollection services,
+        object? serviceKey,
+        string name,
+        Func<IServiceProvider, ElasticsearchClient>? clientProvider = default,
+        Func<IServiceProvider, ElasticsearchCollectionOptions>? optionsProvider = default,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+        where TKey : notnull
+        where TRecord : class
+    {
+        Verify.NotNull(services);
+        Verify.NotNullOrWhiteSpace(name);
+
+        services.Add(new ServiceDescriptor(typeof(ElasticsearchCollection<TKey, TRecord>), serviceKey, (sp, _) =>
+        {
+            var client = clientProvider is null ? sp.GetRequiredService<ElasticsearchClient>() : clientProvider(sp);
+            var options = GetCollectionOptions(sp, optionsProvider);
+
+            // The client was restored from the DI container, so we do not own it.
+            return new ElasticsearchCollection<TKey, TRecord>(client, name, ownsClient: false, options);
+        }, lifetime));
+
+        services.Add(new ServiceDescriptor(typeof(VectorStoreCollection<TKey, TRecord>), serviceKey,
+            static (sp, key) => sp.GetRequiredKeyedService<ElasticsearchCollection<TKey, TRecord>>(key), lifetime));
+
+        services.Add(new ServiceDescriptor(typeof(IVectorSearchable<TRecord>), serviceKey,
+            static (sp, key) => sp.GetRequiredKeyedService<ElasticsearchCollection<TKey, TRecord>>(key), lifetime));
+
+        services.Add(new ServiceDescriptor(typeof(IKeywordHybridSearchable<TRecord>), serviceKey,
+            static (sp, key) => sp.GetRequiredKeyedService<ElasticsearchCollection<TKey, TRecord>>(key), lifetime));
 
         return services;
     }
 
     /// <summary>
-    /// Also register the <see cref="IVectorStoreRecordCollection{TKey, TRecord}"/> with the given <paramref name="serviceId"/> as a <see cref="IVectorSearch{TRecord}"/>.
+    /// Registers a <see cref="ElasticsearchCollection{TKey, TRecord}"/> as <see cref="VectorStoreCollection{TKey, TRecord}"/>
+    /// with <see cref="ElasticsearchClient"/> created with <paramref name="clientSettings"/>.
     /// </summary>
-    /// <typeparam name="TKey">The type of the key.</typeparam>
-    /// <typeparam name="TRecord">The type of the data model that the collection should contain.</typeparam>
-    /// <param name="services">The service collection to register on.</param>
-    /// <param name="serviceId">The service id that the registrations should use.</param>
-    private static void AddVectorizedSearch<TKey, TRecord>(IServiceCollection services, string? serviceId)
+    /// <inheritdoc cref="AddKeyedElasticsearchCollection{TKey, TRecord}(IServiceCollection, object?, string, IElasticsearchClientSettings, ElasticsearchCollectionOptions?, ServiceLifetime)"/>
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
+    public static IServiceCollection AddElasticsearchCollection<TKey, TRecord>(
+        this IServiceCollection services,
+        string name,
+        IElasticsearchClientSettings clientSettings,
+        ElasticsearchCollectionOptions? options = default,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
         where TKey : notnull
-        where TRecord : notnull
+        where TRecord : class
     {
-        services.AddKeyedTransient<IVectorSearch<TRecord>>(
-            serviceId,
-            (sp, _) =>
-            {
-                return sp.GetRequiredKeyedService<IVectorStoreRecordCollection<TKey, TRecord>>(serviceId);
-            });
+        return AddKeyedElasticsearchCollection<TKey, TRecord>(services, serviceKey: null, name, clientSettings, options, lifetime);
+    }
+
+    /// <summary>
+    /// Registers a keyed <see cref="ElasticsearchCollection{TKey, TRecord}"/> as <see cref="VectorStoreCollection{TKey, TRecord}"/>
+    /// with <see cref="ElasticsearchClient"/> created with <paramref name="clientSettings"/>.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to register the <see cref="ElasticsearchCollection{TKey, TRecord}"/> on.</param>
+    /// <param name="serviceKey">The key with which to associate the collection.</param>
+    /// <param name="name">The name of the collection.</param>
+    /// <param name="clientSettings">The Elasticsearch client settings.</param>
+    /// <param name="options">Options to further configure the <see cref="ElasticsearchCollection{TKey, TRecord}"/>.</param>
+    /// <param name="lifetime">The service lifetime for the store. Defaults to <see cref="ServiceLifetime.Singleton"/>.</param>
+    /// <returns>Service collection.</returns>
+    [RequiresUnreferencedCode(DynamicCodeMessage)]
+    [RequiresDynamicCode(UnreferencedCodeMessage)]
+    public static IServiceCollection AddKeyedElasticsearchCollection<TKey, TRecord>(
+        this IServiceCollection services,
+        object? serviceKey,
+        string name,
+        IElasticsearchClientSettings clientSettings,
+        ElasticsearchCollectionOptions? options = default,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+        where TKey : notnull
+        where TRecord : class
+    {
+        Verify.NotNull(clientSettings);
+
+        return AddKeyedElasticsearchCollection<TKey, TRecord>(services, serviceKey, name, _ => new ElasticsearchClient(clientSettings), _ => options!, lifetime);
+    }
+
+    private static ElasticsearchVectorStoreOptions? GetStoreOptions(IServiceProvider sp, Func<IServiceProvider, ElasticsearchVectorStoreOptions?>? optionsProvider)
+    {
+        var options = optionsProvider?.Invoke(sp);
+        if (options?.EmbeddingGenerator is not null)
+        {
+            return options; // The user has provided everything, there is nothing to change.
+        }
+
+        var embeddingGenerator = sp.GetService<IEmbeddingGenerator>();
+        return embeddingGenerator is null
+            ? options // There is nothing to change.
+            : new(options) { EmbeddingGenerator = embeddingGenerator }; // Create a brand new copy in order to avoid modifying the original options.
+    }
+
+    private static ElasticsearchCollectionOptions? GetCollectionOptions(IServiceProvider sp, Func<IServiceProvider, ElasticsearchCollectionOptions?>? optionsProvider)
+    {
+        var options = optionsProvider?.Invoke(sp);
+        if (options?.EmbeddingGenerator is not null)
+        {
+            return options; // The user has provided everything, there is nothing to change.
+        }
+
+        var embeddingGenerator = sp.GetService<IEmbeddingGenerator>();
+        return embeddingGenerator is null
+            ? options // There is nothing to change.
+            : new(options) { EmbeddingGenerator = embeddingGenerator }; // Create a brand new copy in order to avoid modifying the original options.
     }
 }

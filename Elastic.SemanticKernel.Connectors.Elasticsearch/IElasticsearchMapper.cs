@@ -1,5 +1,4 @@
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.VectorData;
 
 namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 
@@ -8,7 +7,7 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 /// </summary>
 /// <typeparam name="TRecordDataModel">The consumer record data model to map to or from.</typeparam>
 /// <typeparam name="TStorageModel">The storage model to map to or from.</typeparam>
-internal interface IElasticsearchVectorStoreRecordMapper<TRecordDataModel, TStorageModel>
+internal interface IElasticsearchMapper<TRecordDataModel, TStorageModel>
 {
     /// <summary>
     /// Maps from the consumer record data model to the storage model.
@@ -22,7 +21,7 @@ internal interface IElasticsearchVectorStoreRecordMapper<TRecordDataModel, TStor
     /// Maps from the storage model to the consumer record data model.
     /// </summary>
     /// <param name="storageModel">The storage data model record to map.</param>
-    /// <param name="options">Options to control the mapping behavior.</param>
+    /// <param name="includeVectors">Whether to include vector properties.</param>
     /// <returns>The mapped result.</returns>
-    public TRecordDataModel MapFromStorageToDataModel(TStorageModel storageModel, StorageToDataModelMapperOptions options);
+    public TRecordDataModel MapFromStorageToDataModel(TStorageModel storageModel, bool includeVectors);
 }

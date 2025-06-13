@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -14,6 +15,7 @@ using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Clients.Elasticsearch.Mapping;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
+using Elastic.Transport.Products.Elasticsearch;
 
 using Microsoft.SemanticKernel;
 
@@ -27,31 +29,42 @@ namespace Elastic.SemanticKernel.Connectors.Elasticsearch;
 ///     Decorator class for <see cref="ElasticsearchClient" /> that exposes the required methods as virtual allowing
 ///     for mocking in unit tests.
 /// </summary>
-internal class MockableElasticsearchClient
+internal class MockableElasticsearchClient :
+    IDisposable
 {
     private static readonly RequestConfiguration CustomUserAgentRequestConfiguration = new()
     {
-        UserAgent = UserAgent.Create("elasticsearch-net", typeof(IElasticsearchClientSettings), ["integration=MSSK"])
+        UserAgent = UserAgent.Create("elasticsearch-net", typeof(IElasticsearchClientSettings), ["integration=MSSK"]),
+        ThrowExceptions = true // TODO: Fixme.
     };
 
+#pragma warning disable IDE0032
+
+    /// <summary>Elasticsearch client that can be used to manage documents in an Elasticsearch store.</summary>
+    private readonly ElasticsearchClient _elasticsearchClient;
+
+#pragma warning restore IDE0032
+
+    private readonly bool _ownsClient;
+    private int _referenceCount = 1;
+
     /// <summary>
-    ///     Initializes a new instance of the <see cref="MockableElasticsearchClient" /> class.
+    /// Initializes a new instance of the <see cref="MockableElasticsearchClient"/> class.
     /// </summary>
-    /// <param name="elasticsearchClient">
-    ///     Elasticsearch client that can be used to manage the collections and points in an
-    ///     Elasticsearch store.
-    /// </param>
-    public MockableElasticsearchClient(ElasticsearchClient elasticsearchClient)
+    /// <param name="elasticsearchClient">Elasticsearch client that can be used to manage documents in an Elasticsearch store.</param>
+    /// <param name="ownsClient">A value indicating whether <paramref name="elasticsearchClient"/> is disposed when the vector store is disposed.</param>
+    public MockableElasticsearchClient(ElasticsearchClient elasticsearchClient, bool ownsClient = true)
     {
         Verify.NotNull(elasticsearchClient);
 
-        ElasticsearchClient = elasticsearchClient;
+        _elasticsearchClient = elasticsearchClient;
+        _ownsClient = ownsClient;
     }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
     /// <summary>
-    ///     Constructor for mocking purposes only.
+    /// Constructor for mocking purposes only.
     /// </summary>
     internal MockableElasticsearchClient()
     {
@@ -60,9 +73,22 @@ internal class MockableElasticsearchClient
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
     /// <summary>
-    ///     Gets the internal <see cref="ElasticsearchClient" /> that this mockable instance wraps.
+    /// Gets the internal <see cref="ElasticsearchClient"/> that this mockable instance wraps.
     /// </summary>
-    public ElasticsearchClient ElasticsearchClient { get; }
+    public ElasticsearchClient ElasticsearchClient => _elasticsearchClient;
+
+    public void Dispose()
+    {
+        if (!_ownsClient)
+        {
+            return;
+        }
+
+        if (Interlocked.Decrement(ref _referenceCount) == 0)
+        {
+            _elasticsearchClient.ElasticsearchClientSettings.Dispose();
+        }
+    }
 
     /// <summary>
     ///     Gets the names of all existing indices.
@@ -81,10 +107,7 @@ internal class MockableElasticsearchClient
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
 
         return response.Indices?.Keys.Where(x => x[0] != '.').ToArray() ?? [];
     }
@@ -111,10 +134,7 @@ internal class MockableElasticsearchClient
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
 
         return response.Exists;
     }
@@ -147,10 +167,7 @@ internal class MockableElasticsearchClient
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
     }
 
     /// <summary>
@@ -174,10 +191,7 @@ internal class MockableElasticsearchClient
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
     }
 
     public virtual async Task<(string id, JsonObject document)?> GetDocumentAsync(
@@ -199,10 +213,7 @@ internal class MockableElasticsearchClient
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
 
         if (!response.Found)
         {
@@ -240,10 +251,7 @@ internal class MockableElasticsearchClient
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
 
         return response.Id;
     }
@@ -273,10 +281,7 @@ internal class MockableElasticsearchClient
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
     }
 
     /// <summary>
@@ -318,10 +323,7 @@ internal class MockableElasticsearchClient
             )
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
 
         return response.Hits;
     }
@@ -370,12 +372,27 @@ internal class MockableElasticsearchClient
             )
             .ConfigureAwait(false);
 
-        if (!response.IsSuccess())
-        {
-            throw new TransportException(PipelineFailure.Unexpected, "Failed to execute request.", response);
-        }
+        ThrowOnError(response);
 
         return response.Hits;
+    }
+
+    internal MockableElasticsearchClient Share()
+    {
+        if (_ownsClient)
+        {
+            Interlocked.Increment(ref _referenceCount);
+        }
+
+        return this;
+    }
+
+    private static void ThrowOnError(ElasticsearchResponse response)
+    {
+        if (!response.IsSuccess())
+        {
+            throw new TransportException(PipelineFailure.Unexpected, $"Failed to execute request:\n{response.ApiCallDetails}", response);
+        }
     }
 }
 
