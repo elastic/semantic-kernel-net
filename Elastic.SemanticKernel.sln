@@ -17,6 +17,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		NuGet.Config = NuGet.Config
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elastic.SemanticKernel.Connectors.ElasticSearch.ConformanceTests", "Elastic.SemanticKernel.Connectors.ElasticSearch.ConformanceTests\Elastic.SemanticKernel.Connectors.ElasticSearch.ConformanceTests.csproj", "{A8DD8128-080F-2DF0-5763-99801D225251}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VectorData.ConformanceTests", "test\VectorData.ConformanceTests\VectorData.ConformanceTests.csproj", "{14BE8394-A3E6-7D6B-DD3A-45E7DAA52DDF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +35,14 @@ Global
 		{038E7FD9-6F16-4024-A741-2328B5E2996C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{038E7FD9-6F16-4024-A741-2328B5E2996C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{038E7FD9-6F16-4024-A741-2328B5E2996C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8DD8128-080F-2DF0-5763-99801D225251}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8DD8128-080F-2DF0-5763-99801D225251}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8DD8128-080F-2DF0-5763-99801D225251}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8DD8128-080F-2DF0-5763-99801D225251}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14BE8394-A3E6-7D6B-DD3A-45E7DAA52DDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14BE8394-A3E6-7D6B-DD3A-45E7DAA52DDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14BE8394-A3E6-7D6B-DD3A-45E7DAA52DDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14BE8394-A3E6-7D6B-DD3A-45E7DAA52DDF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
