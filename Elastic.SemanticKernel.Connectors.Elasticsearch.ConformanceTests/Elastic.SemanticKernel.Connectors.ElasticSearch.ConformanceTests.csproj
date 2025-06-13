@@ -10,6 +10,10 @@
     <NoWarn>$(NoWarn);SKEXP0020</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <WarningLevel>0</WarningLevel>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
     <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
