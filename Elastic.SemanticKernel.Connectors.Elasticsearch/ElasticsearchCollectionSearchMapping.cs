@@ -49,7 +49,7 @@ internal static class ElasticsearchCollectionSearchMapping
                 {
                     var propertyModel = GetPropertyNameMapping(equalToClause.FieldName);
 
-                    filterQueries.Add(new TermQuery(field: propertyModel.StorageName!) { Value = FieldValueFactory.FromValue(equalToClause.Value) });
+                    filterQueries.Add(new TermQuery(propertyModel.StorageName, FieldValueFactory.FromValue(equalToClause.Value)));
 
                     break;
                 }
@@ -71,7 +71,7 @@ internal static class ElasticsearchCollectionSearchMapping
             }
         }
 
-        return Query.Bool(new() { Must = filterQueries });
+        return new BoolQuery { Must = filterQueries };
 
         DataPropertyModel GetPropertyNameMapping(string fieldName)
         {

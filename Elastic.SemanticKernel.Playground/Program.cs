@@ -1,13 +1,12 @@
-using System;
 using System.Threading.Tasks;
 
 namespace Elastic.SemanticKernel.Playground;
 
 internal sealed class Program
 {
-    public static Task Main()
+    public static async Task Main(string[] args)
     {
-        Console.WriteLine("TODO");
-        return Task.CompletedTask;
+        _ = args;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 }

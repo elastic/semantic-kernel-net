@@ -129,8 +129,6 @@ internal sealed class ElasticsearchDynamicMapper :
 
             if (!storageModel.document.TryGetPropertyValue(property.StorageName, out var value))
             {
-                // 
-                property.SetValueAsObject(dataModel, property.Type.IsValueType ? Activator.CreateInstance(property.Type) : null);
                 continue;
             }
 
