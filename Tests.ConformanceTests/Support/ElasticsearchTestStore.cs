@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 
+using System.Text.Json.Serialization;
+
 using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.Serialization;
 using Elastic.SemanticKernel.Connectors.Elasticsearch;
 using Elastic.Transport;
 
@@ -50,9 +53,10 @@ internal sealed class ElasticsearchTestStore : TestStore
         var host = this._container.Hostname;
         var port = this._container.GetMappedPublicPort(ElasticsearchBuilder.ElasticsearchHttpsPort);
 
-        var settings = new ElasticsearchClientSettings(new SingleNodePool(new Uri($"http://{host}:{port}")))
-            .Authentication(new BasicAuthentication(ElasticsearchBuilder.DefaultUsername, ElasticsearchBuilder.DefaultPassword))
-            .ServerCertificateValidationCallback(((_, _, _, _) => true))
+        var settings = new ElasticsearchClientSettings(
+                new SingleNodePool(new Uri($"http://{host}:{port}")),
+                (_, settings) => new DefaultSourceSerializer(settings, x => x.DefaultIgnoreCondition = JsonIgnoreCondition.Never)
+            )
             .EnableDebugMode();
         this._client = new ElasticsearchClient(settings);
 

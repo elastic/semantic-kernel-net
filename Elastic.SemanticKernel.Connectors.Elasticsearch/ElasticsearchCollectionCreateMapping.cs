@@ -35,10 +35,7 @@ internal static class ElasticsearchCollectionCreateMapping
                     Dims = property.Dimensions,
                     Index = true,
                     Similarity = GetSimilarityFunction(property),
-                    IndexOptions = new DenseVectorIndexOptions
-                    {
-                        Type = GetIndexKind(property)
-                    }
+                    IndexOptions = new DenseVectorIndexOptions(GetIndexKind(property))
                 });
         }
 

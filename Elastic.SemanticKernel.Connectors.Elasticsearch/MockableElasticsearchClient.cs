@@ -346,7 +346,6 @@ internal class MockableElasticsearchClient :
     /// <param name="indexName"></param>
     /// <param name="knn"></param>
     /// <param name="query"></param>
-    /// <param name="rank"></param>
     /// <param name="sourceExcludes"></param>
     /// <param name="from"></param>
     /// <param name="size"></param>
@@ -355,9 +354,8 @@ internal class MockableElasticsearchClient :
     /// <exception cref="TransportException"></exception>
     public virtual async Task<IReadOnlyCollection<Hit<JsonObject>>> HybridSearchAsync(
         IndexName indexName,
-        KnnSearch knn,
+        KnnRetriever knn,
         Query query,
-        Rank rank,
         Fields? sourceExcludes,
         int? from,
         int? size,
@@ -366,15 +364,16 @@ internal class MockableElasticsearchClient :
         Verify.NotNull(indexName);
         Verify.NotNull(knn);
         Verify.NotNull(query);
-        Verify.NotNull(rank);
 
         var response = await ElasticsearchClient
             .SearchAsync<JsonObject>(
                 new SearchRequest(indexName)
                 {
-                    Knn = [knn],
-                    Query = query,
-                    Rank = rank,
+                    Retriever = new RRFRetriever(
+                    [
+                        knn,
+                        new StandardRetriever { Query = query }
+                    ]),
                     SourceExcludes = sourceExcludes,
                     From = from,
                     Size = size,

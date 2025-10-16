@@ -148,7 +148,7 @@ public class ElasticsearchCollection<TKey, TRecord> :
             CollectionName = name
         };
 
-        _vectorFields = Fields.FromFields(_model.VectorProperties.Select(x => new Field(x.StorageName)).ToArray())!;
+        _vectorFields = Fields.FromFields(_model.VectorProperties.Select(x => new Field(x.StorageName)).ToArray());
     }
 
     /// <inheritdoc />
@@ -268,10 +268,13 @@ public class ElasticsearchCollection<TKey, TRecord> :
         if (orderByValues?.Count is > 0)
         {
             sort = orderByValues
-                .Select(sortInfo => SortOptions.Field(_model.GetDataOrKeyProperty(sortInfo.PropertySelector).StorageName!, new FieldSort
+                .Select(sortInfo => new SortOptions
                 {
-                    Order = sortInfo.Ascending ? SortOrder.Asc : SortOrder.Desc
-                }))
+                    Field = new FieldSort(_model.GetDataOrKeyProperty(sortInfo.PropertySelector).StorageName)
+                    {
+                        Order = sortInfo.Ascending ? SortOrder.Asc : SortOrder.Desc
+                    }
+                })
                 .ToList();
         }
 
@@ -430,12 +433,15 @@ public class ElasticsearchCollection<TKey, TRecord> :
 
         // Build search query.
 
-        var knnQuery = new KnnQuery
+        var knnQuery = new KnnQuery(vectorProperty.StorageName)
         {
-            Field = vectorProperty.StorageName!,
             QueryVector = searchVector,
-            Filter = filter is null ? null : [filter]
+            Filter = filter is null ? null : [filter],
+            K = 10,
+            NumCandidates = 20
         };
+
+        // TODO: factors
 
         // Execute search query.
 
@@ -443,7 +449,7 @@ public class ElasticsearchCollection<TKey, TRecord> :
                 "search",
                 () => _elasticsearchClient.SearchAsync(
                     Name,
-                    Query.Knn(knnQuery),
+                    knnQuery,
                     null,
                     options.IncludeVectors ? null : _vectorFields,
                     options.Skip,
@@ -494,33 +500,22 @@ public class ElasticsearchCollection<TKey, TRecord> :
 
         // Build search query.
 
-        var knn = new KnnSearch
+        var knn = new KnnRetriever(field: vectorProperty.StorageName, k: 10, numCandidates: 20)
         {
-            Field = vectorProperty.StorageName!,
-            k = top,
-            NumCandidates = Math.Max((int)Math.Ceiling(1.5f * top), 100),
             QueryVector = searchVector,
             Filter = filter is null ? null : [filter]
         };
 
-        Query query = new MatchQuery(textDataProperty.StorageName!)
-        {
-            Query = string.Join(" ", keywords)
-        };
+        Query query = new MatchQuery(textDataProperty.StorageName, string.Join(" ", keywords));
 
         if (filter is not null)
         {
             query = new BoolQuery
             {
-                Must = [filter],
-                Should = [query]
+                Filter = [filter],
+                Must = [query]
             };
         }
-
-        var rank = Rank.Rrf(new RrfRank
-        {
-            RankWindowSize = knn.NumCandidates
-        });
 
         // Execute search query.
 
@@ -530,7 +525,6 @@ public class ElasticsearchCollection<TKey, TRecord> :
                     Name,
                     knn,
                     query,
-                    rank,
                     options.IncludeVectors ? null : _vectorFields,
                     options.Skip,
                     top,

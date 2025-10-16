@@ -71,12 +71,12 @@ internal sealed class ElasticsearchFilterTranslator
 
     private static Query GenerateEqual(string propertyStorageName, object? value, bool negated = false)
     {
-        var coreQuery = value is null
-            ? new BoolQuery { MustNot = [ new ExistsQuery { Field = propertyStorageName! } ] }
-            : Query.Match(new MatchQuery(propertyStorageName!) { Query = FieldValueFactory.FromValue(value) });
+        Query coreQuery = value is null
+            ? new BoolQuery { MustNot = [ new ExistsQuery(propertyStorageName) ] }
+            : new TermQuery(propertyStorageName, FieldValueFactory.FromValue(value));
 
         return negated
-            ? Query.Bool(new BoolQuery { MustNot = [coreQuery] })
+            ? new BoolQuery { MustNot = [coreQuery] }
             : coreQuery;
     }
 
@@ -93,10 +93,10 @@ internal sealed class ElasticsearchFilterTranslator
     {
         return nodeType switch
         {
-            ExpressionType.GreaterThan => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Gt = value }),
-            ExpressionType.GreaterThanOrEqual => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Gte = value }),
-            ExpressionType.LessThan => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Lt = value }),
-            ExpressionType.LessThanOrEqual => Query.Range(new UntypedRangeQuery(propertyStorageName!) { Lte = value }),
+            ExpressionType.GreaterThan => new UntypedRangeQuery(propertyStorageName) { Gt = value },
+            ExpressionType.GreaterThanOrEqual => new UntypedRangeQuery(propertyStorageName) { Gte = value },
+            ExpressionType.LessThan => new UntypedRangeQuery(propertyStorageName) { Lt = value },
+            ExpressionType.LessThanOrEqual => new UntypedRangeQuery(propertyStorageName) { Lte = value },
 
             _ => throw new InvalidOperationException("Unreachable")
         };
@@ -165,11 +165,7 @@ internal sealed class ElasticsearchFilterTranslator
                     throw new NotSupportedException("Value must be a constant.");
                 }
 
-                return Query.Terms(new()
-                {
-                    Field = enumerableProperty.StorageName!,
-                    Terms = new TermsQueryField([FieldValueFactory.FromValue(constant.Value)])
-                });
+                return new TermsQuery(enumerableProperty.StorageName, new TermsQueryField([FieldValueFactory.FromValue(constant.Value)]));
             }
 
             // Contains over inline enumerable.
@@ -213,11 +209,7 @@ internal sealed class ElasticsearchFilterTranslator
                 values.Add(FieldValueFactory.FromValue(element));
             }
 
-            return Query.Terms(new()
-            {
-                Field = property.StorageName!,
-                Terms = new TermsQueryField(values.ToArray()),
-            });
+            return new TermsQuery(property.StorageName, new TermsQueryField(values.ToArray()));
         }
     }
 
