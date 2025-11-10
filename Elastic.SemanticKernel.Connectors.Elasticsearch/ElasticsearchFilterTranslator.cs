@@ -170,18 +170,14 @@ internal sealed class ElasticsearchFilterTranslator
         };
     }
 
+
     private Query TranslateStringContains(Expression instance, string substring)
     {
         if (!TryBindProperty(instance, out var property))
         {
             throw new NotSupportedException("Unsupported property in String.Contains expression.");
         }
-
-        // Use Elasticsearch's MatchPhrase or Wildcard query
-        return new WildcardQuery(property.StorageName)
-        {
-            Wildcard = $"*{substring.ToLower(System.Globalization.CultureInfo.InvariantCulture)}*"
-        };
+        return new MatchPhraseQuery(property.StorageName, substring);
     }
 
     private Query TranslateAny(Expression source, LambdaExpression predicate)
