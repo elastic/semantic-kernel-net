@@ -149,8 +149,95 @@ internal sealed class ElasticsearchFilterTranslator
                 when (declaringType.GetGenericTypeDefinition() == typeof(List<>))
                 => TranslateContains(source, item),
 
-            _ => throw new NotSupportedException($"Unsupported method call: {methodCall.Method.DeclaringType?.Name}.{methodCall.Method.Name}.")
+            // ✅ String.Contains() support
+            {
+                Method.Name: nameof(string.Contains),
+                Object: { } instance,
+                Arguments: [ConstantExpression { Value: string substring }]
+            } when instance.Type == typeof(string)
+                => TranslateStringContains(instance, substring),
+
+            // Enumerable.Any() support
+            {
+                Method.Name: nameof(Enumerable.Any),
+                Arguments: [var source, LambdaExpression predicate]
+            } anyCall
+                when (anyCall.Method.DeclaringType == typeof(Enumerable))
+                => TranslateAny(source, predicate),
+
+            _ => throw new NotSupportedException(
+                $"Unsupported method call: {methodCall.Method.DeclaringType?.Name}.{methodCall.Method.Name}.")
         };
+    }
+
+
+    private Query TranslateStringContains(Expression instance, string substring)
+    {
+        if (!TryBindProperty(instance, out var property))
+        {
+            throw new NotSupportedException("Unsupported property in String.Contains expression.");
+        }
+        return new WildcardQuery(property.StorageName)
+        {
+            Wildcard = $"*{substring.ToLower(System.Globalization.CultureInfo.InvariantCulture)}*"
+        };
+    }
+
+    private Query TranslateAny(Expression source, LambdaExpression predicate)
+    {
+        // Handle: r => r.TagNames.Any(t => externalList.Contains(t))
+        // This translates to checking if any value in the field array matches any value in the external list
+
+        if (predicate.Body is not MethodCallExpression innerMethodCall)
+        {
+            throw new NotSupportedException("Only method calls are supported inside Any().");
+        }
+
+        // Check if it's a Contains call
+        if (innerMethodCall.Method.Name != nameof(Enumerable.Contains))
+        {
+            throw new NotSupportedException($"Only Contains() is supported inside Any(), got {innerMethodCall.Method.Name}.");
+        }
+
+        // Get the field being checked (e.g., TagNames)
+        if (!TryBindProperty(source, out var fieldProperty))
+        {
+            throw new NotSupportedException("Unsupported source property in Any() expression.");
+        }
+
+        // Pattern 1: externalList.Contains(t) - where innerMethodCall is extension method
+        if (innerMethodCall.Method.DeclaringType == typeof(Enumerable) &&
+            innerMethodCall.Arguments.Count == 2 &&
+            innerMethodCall.Arguments[0] is ConstantExpression { Value: IEnumerable externalList } &&
+            innerMethodCall.Arguments[1] is ParameterExpression lambdaParam &&
+            lambdaParam == predicate.Parameters[0])
+        {
+            return BuildTermsQuery(fieldProperty.StorageName, externalList);
+        }
+
+        // Pattern 2: externalList.Contains(t) - where innerMethodCall is instance method (List<T>.Contains)
+        if (innerMethodCall.Method.DeclaringType is { IsGenericType: true } declaringType &&
+            declaringType.GetGenericTypeDefinition() == typeof(List<>) &&
+            innerMethodCall.Object is ConstantExpression { Value: IEnumerable externalList2 } &&
+            innerMethodCall.Arguments.Count == 1 &&
+            innerMethodCall.Arguments[0] is ParameterExpression lambdaParam2 &&
+            lambdaParam2 == predicate.Parameters[0])
+        {
+            return BuildTermsQuery(fieldProperty.StorageName, externalList2);
+        }
+
+        throw new NotSupportedException("Unsupported Any() expression structure. Expected pattern: collection.Any(item => externalList.Contains(item))");
+
+        static Query BuildTermsQuery(string fieldName, IEnumerable values)
+        {
+            var fieldValues = new List<FieldValue>();
+            foreach (var value in values)
+            {
+                fieldValues.Add(FieldValueFactory.FromValue(value));
+            }
+
+            return new TermsQuery(fieldName, new TermsQueryField(fieldValues.ToArray()));
+        }
     }
 
     private Query TranslateContains(Expression source, Expression item)
