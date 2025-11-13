@@ -177,7 +177,10 @@ internal sealed class ElasticsearchFilterTranslator
         {
             throw new NotSupportedException("Unsupported property in String.Contains expression.");
         }
-        return new MatchPhraseQuery(property.StorageName, substring);
+        return new WildcardQuery(property.StorageName)
+        {
+            Wildcard = $"*{substring.ToLower(System.Globalization.CultureInfo.InvariantCulture)}*"
+        };
     }
 
     private Query TranslateAny(Expression source, LambdaExpression predicate)
