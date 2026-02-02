@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35312.102
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11408.102 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.SemanticKernel.Playground", "Elastic.SemanticKernel.Playground\Elastic.SemanticKernel.Playground.csproj", "{49A492D7-1EAB-48BA-9065-0B6EBB25AD31}"
 EndProject
@@ -20,6 +20,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VectorData.ConformanceTests", "test\VectorData.ConformanceTests\VectorData.ConformanceTests.csproj", "{14BE8394-A3E6-7D6B-DD3A-45E7DAA52DDF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.ConformanceTests", "Tests.ConformanceTests\Tests.ConformanceTests.csproj", "{BAB86CE5-4E26-2074-A6B6-E560B2C70022}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Extensions.AI", "src\Elastic.Extensions.AI\Elastic.Extensions.AI.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Extensions.AI.Tests", "src\Elastic.Extensions.AI.Tests\Elastic.Extensions.AI.Tests.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MEAI", "MEAI", "{70CFAC87-C106-4574-A748-E6E25ABD1DD1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MEVD", "MEVD", "{E7E4A7FF-9524-4C3A-BCFE-A00348D0926F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,9 +51,25 @@ Global
 		{BAB86CE5-4E26-2074-A6B6-E560B2C70022}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BAB86CE5-4E26-2074-A6B6-E560B2C70022}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BAB86CE5-4E26-2074-A6B6-E560B2C70022}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{49A492D7-1EAB-48BA-9065-0B6EBB25AD31} = {E7E4A7FF-9524-4C3A-BCFE-A00348D0926F}
+		{038E7FD9-6F16-4024-A741-2328B5E2996C} = {E7E4A7FF-9524-4C3A-BCFE-A00348D0926F}
+		{14BE8394-A3E6-7D6B-DD3A-45E7DAA52DDF} = {E7E4A7FF-9524-4C3A-BCFE-A00348D0926F}
+		{BAB86CE5-4E26-2074-A6B6-E560B2C70022} = {E7E4A7FF-9524-4C3A-BCFE-A00348D0926F}
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DE39841E-28D0-4E3C-9554-55DC9DDA5761}

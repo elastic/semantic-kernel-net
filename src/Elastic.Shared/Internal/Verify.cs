@@ -9,7 +9,11 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
+#if ELASTIC_EXTENSIONS_AI
+namespace Elastic.Extensions.AI;
+#else
 namespace Microsoft.SemanticKernel;
+#endif
 
 #pragma warning disable IDE0007
 #pragma warning disable IDE1006

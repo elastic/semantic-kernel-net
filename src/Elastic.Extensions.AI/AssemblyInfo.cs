@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information.
 
-using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
-// This assembly is currently experimental.
-//[assembly: Experimental("SKEXP0020")]
+[assembly: InternalsVisibleTo("Elastic.Extensions.AI.Tests")]
