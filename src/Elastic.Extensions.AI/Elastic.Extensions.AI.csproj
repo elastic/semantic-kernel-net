@@ -3,9 +3,9 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8</TargetFrameworks>
 
-    <PackageId>Elastic.SemanticKernel.Connectors.Elasticsearch</PackageId>
-    <Title>Elasticsearch connector for Microsoft Semantic Kernel</Title>
-    <Description>Elasticsearch connector for Microsoft Semantic Kernel.</Description>
+    <PackageId>Elastic.Extensions.AI</PackageId>
+    <Title>Elasticsearch embedding generator for Microsoft.Extensions.AI</Title>
+    <Description>Elasticsearch embedding generator implementing Microsoft.Extensions.AI.IEmbeddingGenerator.</Description>
     <AssemblyTitle>$(Title)</AssemblyTitle>
     <PackageIcon>logo.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -23,32 +23,33 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
 
-    <NoWarn>$(NoWarn);IDE0130;MEVD9001</NoWarn>
+    <NoWarn>$(NoWarn);IDE0130</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
     <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
+    <DefineConstants>$(DefineConstants);ELASTIC_EXTENSIONS_AI</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\Assets\logo.png" Pack="true" PackagePath="" Visible="false" />
-    <Content Include="..\LICENSE" Pack="true" PackagePath="" Visible="false" />
-    <Content Include="..\README.md" Pack="true" PackagePath="" Visible="false" />
+    <Content Include="..\..\Assets\logo.png" Pack="true" PackagePath="" Visible="false" />
+    <Content Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <Content Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\src\Elastic.Shared\Internal\Verify.cs" Link="Internal\Diagnostics\Verify.cs" />
+    <Compile Include="..\Elastic.Shared\Internal\Verify.cs" Link="Internal\Verify.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
     <PackageReference Include="MinVer" />
     <PackageReference Include="PolySharp">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
+
 </Project>
