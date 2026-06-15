@@ -25,6 +25,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Extensions.AI", "sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Extensions.AI.Tests", "src\Elastic.Extensions.AI.Tests\Elastic.Extensions.AI.Tests.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Clients.AgentBuilder", "src\Elastic.Clients.AgentBuilder\Elastic.Clients.AgentBuilder.csproj", "{C1D2E3F4-A5B6-7890-CDEF-123456789ABC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Clients.AgentBuilder.Tests", "test\Elastic.Clients.AgentBuilder.Tests\Elastic.Clients.AgentBuilder.Tests.csproj", "{D2E3F4A5-B6C7-8901-DEFA-234567890BCD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Clients.AgentBuilder.IntegrationTests", "test\Elastic.Clients.AgentBuilder.IntegrationTests\Elastic.Clients.AgentBuilder.IntegrationTests.csproj", "{E3F4A5B6-C7D8-9012-EFAB-345678901CDE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.Extensions.AI.IntegrationTests", "test\Elastic.Extensions.AI.IntegrationTests\Elastic.Extensions.AI.IntegrationTests.csproj", "{F4A5B6C7-D8E9-0123-FABC-456789012DEF}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MEAI", "MEAI", "{70CFAC87-C106-4574-A748-E6E25ABD1DD1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MEVD", "MEVD", "{E7E4A7FF-9524-4C3A-BCFE-A00348D0926F}"
@@ -59,6 +67,22 @@ Global
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1D2E3F4-A5B6-7890-CDEF-123456789ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1D2E3F4-A5B6-7890-CDEF-123456789ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1D2E3F4-A5B6-7890-CDEF-123456789ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1D2E3F4-A5B6-7890-CDEF-123456789ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2E3F4A5-B6C7-8901-DEFA-234567890BCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2E3F4A5-B6C7-8901-DEFA-234567890BCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2E3F4A5-B6C7-8901-DEFA-234567890BCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2E3F4A5-B6C7-8901-DEFA-234567890BCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3F4A5B6-C7D8-9012-EFAB-345678901CDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3F4A5B6-C7D8-9012-EFAB-345678901CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3F4A5B6-C7D8-9012-EFAB-345678901CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3F4A5B6-C7D8-9012-EFAB-345678901CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4A5B6C7-D8E9-0123-FABC-456789012DEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4A5B6C7-D8E9-0123-FABC-456789012DEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4A5B6C7-D8E9-0123-FABC-456789012DEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4A5B6C7-D8E9-0123-FABC-456789012DEF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -70,6 +94,10 @@ Global
 		{BAB86CE5-4E26-2074-A6B6-E560B2C70022} = {E7E4A7FF-9524-4C3A-BCFE-A00348D0926F}
 		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
+		{C1D2E3F4-A5B6-7890-CDEF-123456789ABC} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
+		{D2E3F4A5-B6C7-8901-DEFA-234567890BCD} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
+		{E3F4A5B6-C7D8-9012-EFAB-345678901CDE} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
+		{F4A5B6C7-D8E9-0123-FABC-456789012DEF} = {70CFAC87-C106-4574-A748-E6E25ABD1DD1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DE39841E-28D0-4E3C-9554-55DC9DDA5761}
