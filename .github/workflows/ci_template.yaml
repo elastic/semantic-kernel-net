@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 2
 
       - name: .NET Setup
-        uses: zyactions/dotnet-setup@v1
+        uses: zyactions/dotnet-setup@8f4b644ff5ff19bba913663df285b7b7278bb724  # v1.0.1
         with:
           global-json-file: ${{ env.DOTNET_GLOBAL_JSON }}
           problem-matcher: false
@@ -51,7 +51,7 @@ jobs:
           restore-keys: ${{ runner.os }}-nuget-
 
       - name: .NET Restore
-        uses: zyactions/dotnet-restore@v1
+        uses: zyactions/dotnet-restore@bffc71e1a5275122a2795bf2912804f0185db27c  # v1.1.0
         with:
           working-directory: ${{ inputs.path }}
 
@@ -59,7 +59,7 @@ jobs:
       # TODO: Always lint all files, if '.editorconfig' has changed
 
       - name: .NET Lint
-        uses: zyactions/dotnet-lint@v1
+        uses: zyactions/dotnet-lint@a86bc2ec7f63119966cf70cafb56de1c2681cc85  # v1.1.0
         with:
           working-directory: ${{ inputs.path }}
           # This list is empty for the initial commit. NET Lint will lint all files in this case.
@@ -91,7 +91,7 @@ jobs:
           output: ${{ env.FILTERED_SOLUTION }}
 
       - name: .NET Setup
-        uses: zyactions/dotnet-setup@v1
+        uses: zyactions/dotnet-setup@8f4b644ff5ff19bba913663df285b7b7278bb724  # v1.0.1
         with:
           global-json-file: ${{ env.DOTNET_GLOBAL_JSON }}
           problem-matcher: false
@@ -104,7 +104,7 @@ jobs:
           restore-keys: ${{ runner.os }}-nuget-
 
       - name: .NET Restore
-        uses: zyactions/dotnet-restore@v1
+        uses: zyactions/dotnet-restore@bffc71e1a5275122a2795bf2912804f0185db27c  # v1.1.0
         with:
           workspace: ${{ env.FILTERED_SOLUTION }}
 
