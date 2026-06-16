@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Linq.Expressions;
 using Microsoft.Extensions.VectorData;
@@ -283,6 +283,7 @@ public abstract class BasicFilterTests<TKey>(BasicFilterTests<TKey>.Fixture fixt
             r => !r.Bool,
             r => !(bool)r["Bool"]);
 
+
     [ConditionalFact]
     public virtual Task Not_over_bool_And_Comparison()
         => this.TestFilterAsync(
@@ -334,6 +335,90 @@ public abstract class BasicFilterTests<TKey>(BasicFilterTests<TKey>.Fixture fixt
     }
 
     #endregion Contains
+
+    #region String.Contains
+
+    [ConditionalFact]
+    public virtual Task StringContains_with_substring()
+        => this.TestFilterAsync(
+            r => r.String != null && r.String.Contains("fo"),
+            r => r["String"] != null && ((string)r["String"]!).Contains("fo"));
+
+    [ConditionalFact]
+    public virtual Task StringContains_with_full_match()
+        => this.TestFilterAsync(
+            r => r.String != null && r.String.Contains("foo"),
+            r => r["String"] != null && ((string)r["String"]!).Contains("foo"));
+
+    [ConditionalFact]
+    public virtual Task StringContains_no_match()
+        => this.TestFilterAsync(
+            r => r.String != null && r.String.Contains("xyz"),
+            r => r["String"] != null && ((string)r["String"]!).Contains("xyz"),
+            expectZeroResults: true);
+
+    [ConditionalFact]
+    public virtual Task StringContains_with_special_characters()
+        => this.TestFilterAsync(
+            r => r.String != null && r.String.Contains("specia"),
+            r => r["String"] != null && ((string)r["String"]!).Contains("specia"));
+
+    #endregion String.Contains
+
+    #region Any
+
+    [ConditionalFact]
+    public virtual Task Any_with_Contains_using_List()
+    {
+        var tagTexts = new List<string> { "x", "z" };
+
+        return this.TestFilterAsync(
+            r => r.StringList.Any(t => tagTexts.Contains(t)),
+            r => ((List<string>)r["StringList"]!).Any(t => tagTexts.Contains(t)));
+    }
+
+    [ConditionalFact]
+    public virtual Task Any_with_Contains_no_match()
+    {
+        var tagTexts = new List<string> { "unknown", "missing" };
+
+        return this.TestFilterAsync(
+            r => r.StringList.Any(t => tagTexts.Contains(t)),
+            r => ((List<string>)r["StringList"]!).Any(t => tagTexts.Contains(t)),
+            expectZeroResults: true);
+    }
+
+    [ConditionalFact]
+    public virtual Task Any_with_Contains_single_value()
+    {
+        var tagTexts = new List<string> { "x" };
+
+        return this.TestFilterAsync(
+            r => r.StringList.Any(t => tagTexts.Contains(t)),
+            r => ((List<string>)r["StringList"]!).Any(t => tagTexts.Contains(t)));
+    }
+
+    [ConditionalFact]
+    public virtual Task Any_combined_with_And()
+    {
+        var tagTexts = new List<string> { "x", "z" };
+
+        return this.TestFilterAsync(
+            r => r.StringList.Any(t => tagTexts.Contains(t)) && r.Int == 8,
+            r => ((List<string>)r["StringList"]!).Any(t => tagTexts.Contains(t)) && (int)r["Int"] == 8);
+    }
+
+    [ConditionalFact]
+    public virtual Task Any_combined_with_Or()
+    {
+        var tagTexts = new List<string> { "unknown" };
+
+        return this.TestFilterAsync(
+            r => r.StringList.Any(t => tagTexts.Contains(t)) || r.String == "foo",
+            r => ((List<string>)r["StringList"]!).Any(t => tagTexts.Contains(t)) || r["String"] == "foo");
+    }
+
+    #endregion Any
 
     #region Variable types
 
