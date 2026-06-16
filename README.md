@@ -1,11 +1,15 @@
 <img align="right" width="auto" height="auto" src="https://www.elastic.co/static-res/images/elastic-logo-200.png"/>
 
-# Elasticsearch connector for Microsoft Semantic Kernel
+# Elastic AI integrations for .NET
 
-Repository for `Elastic.SemanticKernel.Connectors.Elasticsearch` the official Elasticsearch [Vector Store Connector](https://learn.microsoft.com/en-us/semantic-kernel/concepts/vector-store-connectors/?pivots=programming-language-csharp) for
-[Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/overview/).
+Repository for Elastic's AI integrations for .NET:
 
-## Introduction
+- [`Elastic.SemanticKernel.Connectors.Elasticsearch`](./Elastic.SemanticKernel.Connectors.Elasticsearch) — The official Elasticsearch [Vector Store Connector](https://learn.microsoft.com/en-us/semantic-kernel/concepts/vector-store-connectors/?pivots=programming-language-csharp) for [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/overview/).
+- [`Elastic.Extensions.AI`](./src/Elastic.Extensions.AI) — Elasticsearch embedding generator implementing [Microsoft.Extensions.AI](https://learn.microsoft.com/en-us/dotnet/ai/ai-extensions).
+
+## Elastic.SemanticKernel.Connectors.Elasticsearch
+
+### Introduction
 
 [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/overview/) is an SDK that integrates Large Language Models (LLMs) like OpenAI, Azure OpenAI, and Hugging Face with conventional programming languages like C#, Python, and Java. Semantic Kernel achieves this by allowing you to define plugins that can be chained together in just a few lines of code.
 
@@ -210,4 +214,4 @@ public class Hotel
 
 ## License
 
-Elasticsearch connector for Microsoft Semantic Kernel is licensed under the Apache 2.0 license.
+This repository is licensed under the Apache 2.0 license.

@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Product>Elastic.SemanticKernel</Product>
+    <Product>Elastic.AI</Product>
     <Authors>Elastic and contributors</Authors>
     <Company>Elastic NV</Company>
     <Copyright>Elastic NV</Copyright>
