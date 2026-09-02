@@ -376,3 +376,6 @@ FodyWeavers.xsd
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Claude Code personal settings
+.claude/settings.local.json
